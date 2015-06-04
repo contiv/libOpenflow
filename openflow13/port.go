@@ -4,7 +4,7 @@ import (
     "encoding/binary"
     "net"
 
-    "../common"
+    "github.com/shaleman/libOpenflow/common"
 )
 
 // ofp_port 1.3

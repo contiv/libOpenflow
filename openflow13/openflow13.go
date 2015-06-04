@@ -13,9 +13,9 @@ import (
     "encoding/binary"
     "errors"
 
-    "../protocol"
-    "../common"
-    "../util"
+    "github.com/shaleman/libOpenflow/protocol"
+    "github.com/shaleman/libOpenflow/common"
+    "github.com/shaleman/libOpenflow/util"
 )
 
 const (

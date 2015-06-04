@@ -5,7 +5,7 @@ import (
     "log"
     "encoding/binary"
 
-    "../util"
+    "github.com/shaleman/libOpenflow/util"
 )
 
 // ofp_match 1.3

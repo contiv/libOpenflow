@@ -6,7 +6,7 @@ import (
     "encoding/binary"
     "errors"
 
-    "../util"
+    "github.com/shaleman/libOpenflow/util"
 )
 
 var messageXid uint32 = 1

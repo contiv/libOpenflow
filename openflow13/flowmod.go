@@ -4,7 +4,7 @@ import (
     "log"
     "encoding/binary"
 
-    "../common"
+    "github.com/shaleman/libOpenflow/common"
 )
 
 // ofp_flow_mod     1.3

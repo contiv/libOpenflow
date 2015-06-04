@@ -4,7 +4,7 @@ import (
     "encoding/binary"
     "errors"
 
-    "../util"
+    "github.com/shaleman/libOpenflow/util"
 )
 
 // ofp_action_type 1.3

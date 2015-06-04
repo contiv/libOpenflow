@@ -5,8 +5,8 @@ package openflow13
 import (
     "errors"
     "encoding/binary"
-    
-    "../util"
+
+    "github.com/shaleman/libOpenflow/util"
 )
 
 

@@ -4,8 +4,8 @@ import (
     "log"
     "encoding/binary"
 
-    "../common"
-    "../util"
+    "github.com/shaleman/libOpenflow/common"
+    "github.com/shaleman/libOpenflow/util"
 )
 
 // ofp_multipart_request 1.3
