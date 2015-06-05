@@ -31,7 +31,7 @@ type Parser interface {
 }
 
 type MessageStream struct {
-    conn *net.TCPConn
+    conn net.Conn
     pool *BufferPool
     // Message parser
     parser Parser
@@ -49,7 +49,7 @@ type MessageStream struct {
 
 // Returns a pointer to a new MessageStream. Used to parse
 // OpenFlow messages from conn.
-func NewMessageStream(conn *net.TCPConn, parser Parser) *MessageStream {
+func NewMessageStream(conn net.Conn, parser Parser) *MessageStream {
     m := &MessageStream{
         conn,
         NewBufferPool(),
