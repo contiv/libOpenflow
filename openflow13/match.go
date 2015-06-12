@@ -441,6 +441,9 @@ func NewEthTypeField(ethType uint16) *MatchField {
     return f
 }
 
+const OFPVID_PRESENT = 0x1000   /* Bit that indicate that a VLAN id is set */
+const OFPVID_NONE = 0x0000      /* No VLAN id was set. */
+
 // VLAN_ID field
 type VlanIdField struct {
     VlanId      uint16
@@ -468,7 +471,7 @@ func NewVlanIdField(vlanId uint16) *MatchField {
     f.HasMask = false
 
     vlanIdField := new(VlanIdField)
-    vlanIdField.VlanId = vlanId
+    vlanIdField.VlanId = vlanId | OFPVID_PRESENT
     f.Value = vlanIdField
     f.Length = uint8(vlanIdField.Len())
 

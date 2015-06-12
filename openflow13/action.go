@@ -224,6 +224,39 @@ func NewActionGroup(group uint32) *ActionGroup {
     return a
 }
 
+func (a *ActionGroup) Len() (n uint16) {
+    return a.ActionHeader.Len() + 4
+}
+
+func (a *ActionGroup) MarshalBinary() (data []byte, err error) {
+    data = make([]byte, int(a.Len()))
+    b := make([]byte, 0)
+    n := 0
+
+    b, err = a.ActionHeader.MarshalBinary()
+    copy(data[n:], b)
+    n += len(b)
+    binary.BigEndian.PutUint32(data[n:], a.GroupId)
+    n += 4
+
+    return
+}
+
+func (a *ActionGroup) UnmarshalBinary(data []byte) error {
+    if len(data) < int(a.Len()) {
+        return errors.New("The []byte the wrong size to unmarshal an " +
+            "ActionOutput message.")
+    }
+    n := 0
+    err := a.ActionHeader.UnmarshalBinary(data[n:])
+    n += int(a.ActionHeader.Len())
+    a.GroupId = binary.BigEndian.Uint32(data[n:])
+    n += 4
+
+    return err
+}
+
+
 type ActionMplsTtl struct {
     ActionHeader
     MplsTtl uint8
@@ -258,14 +291,6 @@ func NewActionPushMpls(etherType uint16) *ActionPush {
     return a
 }
 
-func NewActionPopVlan() *ActionHeader {
-    act := new(ActionHeader)
-    act.Type = ActionType_PopVlan
-    act.Length = 4
-
-    return act
-}
-
 func (a *ActionPush) Len() (n uint16) {
     return a.ActionHeader.Len() + 4
 }
@@ -283,6 +308,38 @@ func (a *ActionPush) MarshalBinary() (data []byte, err error) {
 func (a *ActionPush) UnmarshalBinary(data []byte) error {
     a.ActionHeader.UnmarshalBinary(data[:4])
     a.EtherType = binary.BigEndian.Uint16(data[4:])
+    return nil
+}
+
+type ActionPopVlan struct {
+    ActionHeader
+    pad     []byte  // 4bytes
+}
+
+func NewActionPopVlan() *ActionPopVlan {
+    act := new(ActionPopVlan)
+    act.Type = ActionType_PopVlan
+    act.Length = 8
+
+    return act
+}
+
+func (a *ActionPopVlan) Len() (n uint16) {
+    return a.ActionHeader.Len() + 4
+}
+
+func (a *ActionPopVlan) MarshalBinary() (data []byte, err error) {
+    data, err = a.ActionHeader.MarshalBinary()
+
+    // Padding
+    bytes := make([]byte, 4)
+
+    data = append(data, bytes...)
+    return
+}
+
+func (a *ActionPopVlan) UnmarshalBinary(data []byte) error {
+    a.ActionHeader.UnmarshalBinary(data[:4])
     return nil
 }
 

@@ -94,6 +94,8 @@ func (g *GroupMod) MarshalBinary() (data []byte, err error) {
         log.Printf("Groupmod bucket: %v", bytes)
     }
 
+    log.Printf("GroupMod(%d): %v", len(data), data)
+
     return
 }
 
@@ -134,10 +136,11 @@ type Bucket struct {
 func NewBucket() *Bucket {
     bkt := new(Bucket)
 
-    bkt.Weight = 0
+    bkt.Weight = 1
     bkt.pad = make([]byte, 4)
     bkt.Actions = make([]Action, 0)
-
+    bkt.WatchPort = P_ANY
+    bkt.WatchGroup = OFPG_ANY
     bkt.Length = bkt.Len()
 
     return bkt
