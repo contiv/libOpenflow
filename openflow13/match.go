@@ -598,6 +598,50 @@ func NewTunnelIdField(tunnelId uint64) *MatchField {
     return f
 }
 
+// METADATA field
+type MetadataField struct {
+    Metadata      uint64
+}
+
+func (m *MetadataField) Len() uint16 {
+    return 8
+}
+func (m *MetadataField) MarshalBinary() (data []byte, err error) {
+    data = make([]byte, m.Len())
+
+    binary.BigEndian.PutUint64(data, m.Metadata)
+    return
+}
+func (m *MetadataField) UnmarshalBinary(data []byte) error {
+    m.Metadata = binary.BigEndian.Uint64(data)
+    return nil
+}
+
+// Return a MatchField for tunel id matching
+func NewMetadataField(metadata uint64, metadataMask *uint64) *MatchField {
+    f := new(MatchField)
+    f.Class = OXM_CLASS_OPENFLOW_BASIC
+    f.Field = OXM_FIELD_METADATA
+    f.HasMask = false
+
+    metadataField := new(MetadataField)
+    metadataField.Metadata = metadata
+    f.Value = metadataField
+    f.Length = uint8(metadataField.Len())
+
+    // Add the mask
+    if (metadataMask != nil) {
+        mask := new(MetadataField)
+        mask.Metadata = *metadataMask
+        f.Mask = mask
+        f.HasMask = true
+        f.Length += uint8(mask.Len())
+    }
+
+    return f
+}
+
+
 // FIXME: Need to add following fields
 // IP_PROTO
 // IPV4_SRC
