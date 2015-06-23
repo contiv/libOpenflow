@@ -3,10 +3,10 @@ package openflow13
 // This file has all group related defs
 
 import (
-    "log"
     "encoding/binary"
 
     "github.com/shaleman/libOpenflow/common"
+    log "github.com/Sirupsen/logrus"
 )
 
 const (
@@ -91,10 +91,10 @@ func (g *GroupMod) MarshalBinary() (data []byte, err error) {
     for _, bkt := range g.Buckets {
         bytes, err = bkt.MarshalBinary()
         data = append(data, bytes...)
-        log.Printf("Groupmod bucket: %v", bytes)
+        log.Debugf("Groupmod bucket: %v", bytes)
     }
 
-    log.Printf("GroupMod(%d): %v", len(data), data)
+    log.Debugf("GroupMod(%d): %v", len(data), data)
 
     return
 }

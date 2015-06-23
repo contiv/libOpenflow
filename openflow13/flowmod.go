@@ -1,10 +1,10 @@
 package openflow13
 
 import (
-    "log"
     "encoding/binary"
 
     "github.com/shaleman/libOpenflow/common"
+    log "github.com/Sirupsen/logrus"
 )
 
 // ofp_flow_mod     1.3
@@ -111,10 +111,10 @@ func (f *FlowMod) MarshalBinary() (data []byte, err error) {
     for _, instr := range f.Instructions {
         bytes, err = instr.MarshalBinary()
         data = append(data, bytes...)
-        log.Printf("flowmod instr: %v", bytes)
+        log.Debugf("flowmod instr: %v", bytes)
     }
 
-    log.Printf("Flowmod(%d): %v", len(data), data)
+    log.Debugf("Flowmod(%d): %v", len(data), data)
     return
 }
 
