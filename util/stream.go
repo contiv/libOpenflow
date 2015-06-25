@@ -4,6 +4,7 @@ import (
     "encoding/binary"
     "net"
     "bytes"
+    "strings"
 
     log "github.com/Sirupsen/logrus"
 )
@@ -79,7 +80,7 @@ func (m *MessageStream) outbound() {
     for {
         select {
         case <-m.Shutdown:
-            log.Warnln("Closing OpenFlow message stream.")
+            log.Infof("Closing OpenFlow message stream.")
             m.conn.Close()
             return
         case msg := <-m.Outbound:
@@ -107,6 +108,10 @@ func (m *MessageStream) inbound() {
     for {
         n, err := m.conn.Read(tmp)
         if err != nil {
+            // Handle explicitly disconnecting by closing connection
+            if strings.Contains(err.Error(), "use of closed network connection") {
+                return
+            }
             log.Warnln("InboundError", err)
             m.Error <- err
             m.Shutdown <- true
