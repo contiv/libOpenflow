@@ -764,24 +764,24 @@ func NewUdpDstField(port uint16) *MatchField {
 
 // Tcp flags field
 type TcpFlagsField struct {
-	TcpFlags uint8
+	TcpFlags uint16
 }
 
 func (m *TcpFlagsField) Len() uint16 {
-	return 1
+	return 2
 }
 func (m *TcpFlagsField) MarshalBinary() (data []byte, err error) {
-	data = make([]byte, 1)
-	data[0] = m.TcpFlags
+	data = make([]byte, m.Len())
+	binary.BigEndian.PutUint16(data, m.TcpFlags)
 	return
 }
 func (m *TcpFlagsField) UnmarshalBinary(data []byte) error {
-	m.TcpFlags = data[0]
+	m.TcpFlags = binary.BigEndian.Uint16(data)
 	return nil
 }
 
 // Return a tcp flags field
-func NewTcpFlagsField(tcpFlag uint8, tcpFlagMask *uint8) *MatchField {
+func NewTcpFlagsField(tcpFlag uint16, tcpFlagMask *uint16) *MatchField {
 	f := new(MatchField)
 	f.Class = OXM_CLASS_OPENFLOW_BASIC
 	f.Field = OXM_FIELD_TCP_FLAGS
