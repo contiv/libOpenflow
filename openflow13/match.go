@@ -475,7 +475,7 @@ func (m *VlanIdField) UnmarshalBinary(data []byte) error {
 }
 
 // Return a MatchField for vlan id matching
-func NewVlanIdField(vlanId uint16, mask bool) *MatchField {
+func NewVlanIdField(vlanId uint16, vlanMask *uint16) *MatchField {
 	f := new(MatchField)
 	f.Class = OXM_CLASS_OPENFLOW_BASIC
 	f.Field = OXM_FIELD_VLAN_VID
@@ -486,14 +486,13 @@ func NewVlanIdField(vlanId uint16, mask bool) *MatchField {
 	f.Value = vlanIdField
 	f.Length = uint8(vlanIdField.Len())
 	
-	if mask == true { 
+	if vlanMask != nil  { 
 		mask := new(VlanIdField)
-		mask.VlanId = OFPVID_PRESENT
+		mask.VlanId = *vlanMask
 		f.Mask = mask
 		f.HasMask = true
 		f.Length += uint8(mask.Len())
 	}
-
 	return f
 }
 
