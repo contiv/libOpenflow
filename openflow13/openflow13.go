@@ -137,7 +137,7 @@ func Parse(b []byte) (message util.Message, err error) {
 		message = NewFlowRemoved()
 		err = message.UnmarshalBinary(b)
 	case Type_PortStatus:
-		message = new(PortStatus)
+		message = NewPortStatus()
 		err = message.UnmarshalBinary(b)
 	case Type_PacketOut:
 		break

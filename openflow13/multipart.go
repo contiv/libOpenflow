@@ -141,9 +141,13 @@ func (s *MultipartReply) UnmarshalBinary(data []byte) error {
 			repl = new(TableStats)
 		case MultipartType_Queue:
 			repl = new(QueueStats)
+		case MultipartType_PortDesc:
+			repl = new(PortDesc)
 		// FIXME: Support all types
 		case MultipartType_Experimenter:
 			break
+		default:
+			return fmt.Errorf("No kown mp type ")
 		}
 
 		err = repl.UnmarshalBinary(data[n:])
@@ -919,6 +923,8 @@ func NewPortStatus() *PortStatus {
 	p := new(PortStatus)
 	p.Header = NewOfp13Header()
 	p.pad = make([]byte, 7)
+
+	p.Desc = *NewPhyPort()
 	return p
 }
 
@@ -956,6 +962,49 @@ func (s *PortStatus) UnmarshalBinary(data []byte) error {
 
 	err = s.Desc.UnmarshalBinary(data[n:])
 	return err
+}
+
+///Port Description reply
+type PortDesc struct {
+	ports []*PhyPort
+}
+
+func (s PortDesc) Len() (n uint16) {
+
+	n = 0
+
+	for _, r := range s.ports {
+		n += uint16(r.Len())
+	}
+	return
+}
+
+func (s *PortDesc) MarshalBinary() (data []byte, err error) {
+
+	b := make([]byte, 8)
+
+	for _, r := range s.ports {
+		b, err = r.MarshalBinary()
+		data = append(data, b...)
+	}
+	return
+}
+func (s *PortDesc) UnmarshalBinary(data []byte) error {
+
+	nPorts := (len(data)) / 64
+	if nPorts == 0 {
+		return nil
+	}
+	s.ports = make([]*PhyPort, nPorts)
+	for i := 0; i < nPorts; i++ {
+		buf := data[i*64:]
+		s.ports[i] = NewPhyPort()
+		if err := s.ports[i].UnmarshalBinary(buf[0:64]); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // ofp_port_reason 1.0
