@@ -20,11 +20,7 @@ type MultipartRequest struct {
 }
 
 func (s *MultipartRequest) Len() (n uint16) {
-	if s.Body != nil {
-		return s.Header.Len() + 8 + s.Body.Len()
-	} else {
-		return s.Header.Len() + 8
-	}
+	return s.Header.Len() + 8 + s.Body.Len()
 }
 
 func (s *MultipartRequest) MarshalBinary() (data []byte, err error) {
@@ -39,10 +35,10 @@ func (s *MultipartRequest) MarshalBinary() (data []byte, err error) {
 	n += 2
 	n += 4 // for padding
 	data = append(data, b...)
-	if s.Body != nil {
-		b, err = s.Body.MarshalBinary()
-		data = append(data, b...)
-	}
+
+	b, err = s.Body.MarshalBinary()
+	data = append(data, b...)
+
 	log.Debugf("Sending MultipartRequest (%d): %v", len(data), data)
 
 	return
