@@ -3,9 +3,7 @@ package openflow13
 import (
 	"encoding/binary"
 	"fmt"
-
 	log "github.com/Sirupsen/logrus"
-
 	"github.com/contiv/libOpenflow/common"
 	"github.com/contiv/libOpenflow/util"
 )
@@ -924,7 +922,6 @@ func NewPortStatus() *PortStatus {
 	p := new(PortStatus)
 	p.Header = NewOfp13Header()
 	p.pad = make([]byte, 7)
-
 	p.Desc = *NewPhyPort()
 	return p
 }
@@ -971,9 +968,7 @@ type PortDesc struct {
 }
 
 func (s PortDesc) Len() (n uint16) {
-
 	n = 0
-
 	for _, r := range s.ports {
 		n += uint16(r.Len())
 	}
@@ -981,7 +976,6 @@ func (s PortDesc) Len() (n uint16) {
 }
 
 func (s *PortDesc) MarshalBinary() (data []byte, err error) {
-
 	b := make([]byte, 8)
 
 	for _, r := range s.ports {
