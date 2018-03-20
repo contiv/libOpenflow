@@ -1,0 +1,30 @@
+#
+# Copyright (c) 2017 Ericsson India Global Services Pvt Ltd. and others.  All rights reserved.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License v1.0 which accompanies this distribution,
+# and is available at http://www.eclipse.org/legal/epl-v10.html
+#
+.classpath
+.project
+.settings
+.metadata
+*.iml
+.idea
+bin
+xtend-gen
+target
+target-ide
+.tox
+.DS_Store
+.checkstyle
+.fbExcludeFilterFile
+.factorypath
+.fbExcludeFilterFile
+vendor
+yang-gen-config
+yang-gen-sal
+classes
+maven-metadata-local.xml
+META-INF
+gopath

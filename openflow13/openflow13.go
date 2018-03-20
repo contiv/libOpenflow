@@ -13,9 +13,9 @@ import (
 	"errors"
 	"net"
 
-	"github.com/contiv/libOpenflow/common"
-	"github.com/contiv/libOpenflow/protocol"
-	"github.com/contiv/libOpenflow/util"
+	"../common"
+	"../protocol"
+	"../util"
 )
 
 const (
