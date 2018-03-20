@@ -7,7 +7,7 @@ import (
 	"errors"
 	"sync/atomic"
 
-	"github.com/contiv/libOpenflow/util"
+	"../util"
 )
 
 var messageXid uint32 = 1

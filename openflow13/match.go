@@ -6,7 +6,7 @@ import (
 	"log"
 	"net"
 
-	"github.com/contiv/libOpenflow/util"
+	"../util"
 )
 
 // ofp_match 1.3

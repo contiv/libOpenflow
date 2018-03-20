@@ -1,4 +1,17 @@
-package libOpenflow
+package main
 
-// This library implements the openflow1.3 encap/decap.
-// Please use packages in common and openflow13 subdirectories
+import (
+	"./ofctrl"
+)
+
+func main() {
+
+	// Main app
+	var app ofctrl.OfApp
+
+	// Create a controller
+	ctrler := ofctrl.NewController(&app)
+
+	// start listening
+	ctrler.Listen(":6633")
+}
