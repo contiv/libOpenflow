@@ -65,7 +65,7 @@ func (a *ActionHeader) UnmarshalBinary(data []byte) error {
 }
 
 // Decode Action types.
-func DecodeAction(data []byte) Action {
+func DecodeAction(data []byte) (Action, error) {
 	t := binary.BigEndian.Uint16(data[:2])
 	var a Action
 	switch t {
@@ -94,16 +94,87 @@ func DecodeAction(data []byte) Action {
 	case ActionType_SetNwTtl:
 		a = new(ActionNwTtl)
 	case ActionType_DecNwTtl:
-		a = new(ActionHeader)
+		a = new(ActionDecNwTtl)
 	case ActionType_SetField:
 		a = new(ActionSetField)
 	case ActionType_PushPbb:
 		a = new(ActionPush)
 	case ActionType_PopPbb:
 		a = new(ActionHeader)
+	case ActionType_Experimenter:
+		// For Experimenter message, the length of action should be at least 10 bytes,
+		// including type(2 byte), length(2 byte), vendor(4 byte), and subtype(2 byte)
+		if len(data) < NxActionHeaderLength {
+			return nil, errors.New("The byte array has wrong size for openflow experimenter message")
+		}
+		v := binary.BigEndian.Uint32(data[4:8])
+		if v == NxExperimenterID {
+			subtype := binary.BigEndian.Uint16(data[8:])
+			switch subtype {
+			case NXAST_RESUBMIT:
+				a = new(NXActionResubmit)
+			case NXAST_SET_TUNNEL:
+			case NXAST_DROP_SPOOFED_ARP:
+			case NXAST_SET_QUEUE:
+			case NXAST_POP_QUEUE:
+			case NXAST_REG_MOVE:
+				a = new(NXActionRegMove)
+			case NXAST_REG_LOAD:
+				a = new(NXActionRegLoad)
+			case NXAST_NOTE:
+			case NXAST_SET_TUNNEL_V6:
+			case NXAST_MULTIPATH:
+			case NXAST_AUTOPATH:
+			case NXAST_BUNDLE:
+			case NXAST_BUNDLE_LOAD:
+			case NXAST_RESUBMIT_TABLE:
+				a = new(NXActionResubmitTable)
+			case NXAST_OUTPUT_REG:
+				a = newNXActionOutputReg()
+			case NXAST_LEARN:
+			case NXAST_EXIT:
+			case NXAST_DEC_TTL:
+				a = new(NXActionDecTTL)
+			case NXAST_FIN_TIMEOUT:
+			case NXAST_CONTROLLER:
+			case NXAST_DEC_TTL_CNT_IDS:
+				a = new(NXActionDecTTLCntIDs)
+			case NXAST_PUSH_MPLS:
+			case NXAST_POP_MPLS:
+			case NXAST_SET_MPLS_TTL:
+			case NXAST_DEC_MPLS_TTL:
+			case NXAST_STACK_PUSH:
+			case NXAST_STACK_POP:
+			case NXAST_SAMPLE:
+			case NXAST_SET_MPLS_LABEL:
+			case NXAST_SET_MPLS_TC:
+			case NXAST_OUTPUT_REG2:
+				a = new(NXActionOutputReg)
+			case NXAST_REG_LOAD2:
+			case NXAST_CNJUNCTION:
+				a = new(NXActionConjunction)
+			case NXAST_CT:
+				a = new(NXActionConnTrack)
+			case NXAST_NAT:
+				a = new(NXActionCTNAT)
+			case NXAST_CONTROLLER2:
+			case NXAST_SAMPLE2:
+			case NXAST_OUTPUT_TRUNC:
+			case NXAST_CT_CLEAR:
+			case NXAST_CT_RESUBMIT:
+				a = new(NXActionResubmitTable)
+				a.(*NXActionResubmitTable).withCT = true
+			case NXAST_RAW_ENCAP:
+			case NXAST_RAW_DECAP:
+			case NXAST_DEC_NSH_TTL:
+			}
+		}
 	}
-	a.UnmarshalBinary(data)
-	return a
+	err := a.UnmarshalBinary(data)
+	if err != nil {
+		return a, err
+	}
+	return a, nil
 }
 
 // Action structure for OFPAT_OUTPUT, which sends packets out ’port’.
@@ -260,6 +331,39 @@ type ActionMplsTtl struct {
 	ActionHeader
 	MplsTtl uint8
 	pad     []byte // 3bytes
+}
+
+type ActionDecNwTtl struct {
+	ActionHeader
+	pad []byte // 4bytes
+}
+
+func NewActionDecNwTtl() *ActionDecNwTtl {
+	act := new(ActionDecNwTtl)
+	act.Type = ActionType_DecNwTtl
+	act.Length = 8
+	act.pad = make([]byte, 4)
+	return act
+}
+
+func (a *ActionDecNwTtl) Len() (n uint16) {
+	return a.ActionHeader.Len() + 4
+}
+
+func (a *ActionDecNwTtl) MarshalBinary() (data []byte, err error) {
+	data, err = a.ActionHeader.MarshalBinary()
+	if err != nil {
+		return
+	}
+
+	// Padding
+	bytes := make([]byte, 4)
+	data = append(data, bytes...)
+	return
+}
+
+func (a *ActionDecNwTtl) UnmarshalBinary(data []byte) error {
+	return a.ActionHeader.UnmarshalBinary(data[:4])
 }
 
 type ActionNwTtl struct {

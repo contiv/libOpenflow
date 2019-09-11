@@ -261,7 +261,10 @@ func (p *PacketOut) UnmarshalBinary(data []byte) error {
 	n += 6 // for pad
 
 	for n < (n + p.ActionsLen) {
-		a := DecodeAction(data[n:])
+		a, err := DecodeAction(data[n:])
+		if err != nil {
+			return err
+		}
 		p.Actions = append(p.Actions, a)
 		n += a.Len()
 	}
