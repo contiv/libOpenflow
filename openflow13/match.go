@@ -174,6 +174,33 @@ func (m *MatchField) UnmarshalBinary(data []byte) error {
 	return err
 }
 
+func (m *MatchField) MarshalHeader() uint32 {
+	var maskData uint32
+	if m.HasMask {
+		maskData = 1 << 8
+	} else {
+		maskData = 0 << 8
+	}
+	return uint32(m.Class)<<16 | uint32(m.Field)<<9 | maskData | uint32(m.Length)
+}
+
+func (m *MatchField) UnmarshalHeader(data []byte) error {
+	var err error
+	if len(data) < int(4) {
+		err = fmt.Errorf("the byte array has wrong size to unmarshal MatchField header")
+		return err
+	}
+	n := 0
+	m.Class = binary.BigEndian.Uint16(data[n:])
+	n += 2
+	fieldWithMask := data[n]
+	m.HasMask = bool(fieldWithMask&1 == 1)
+	m.Field = fieldWithMask >> 1
+	n += 1
+	m.Length = data[n] & 0xff
+	return err
+}
+
 func DecodeMatchField(class uint16, field uint8, data []byte) (util.Message, error) {
 	if class == OXM_CLASS_OPENFLOW_BASIC {
 		var val util.Message
@@ -211,7 +238,9 @@ func DecodeMatchField(class uint16, field uint8, data []byte) (util.Message, err
 		case OXM_FIELD_UDP_DST:
 			val = new(PortField)
 		case OXM_FIELD_SCTP_SRC:
+			val = new(PortField)
 		case OXM_FIELD_SCTP_DST:
+			val = new(PortField)
 		case OXM_FIELD_ICMPV4_TYPE:
 		case OXM_FIELD_ICMPV4_CODE:
 		case OXM_FIELD_ARP_OP:
@@ -250,24 +279,103 @@ func DecodeMatchField(class uint16, field uint8, data []byte) (util.Message, err
 			return nil, fmt.Errorf("Bad pkt class: %v field: %v data: %v", class, field, data)
 		}
 
-		val.UnmarshalBinary(data)
+		err := val.UnmarshalBinary(data)
+		if err != nil {
+			return nil, err
+		}
 		return val, nil
 	} else if class == OXM_CLASS_NXM_1 {
 		var val util.Message
 		switch field {
+		case NXM_NX_REG0:
+			val = new(Uint32Message)
+		case NXM_NX_REG1:
+			val = new(Uint32Message)
+		case NXM_NX_REG2:
+			val = new(Uint32Message)
+		case NXM_NX_REG3:
+			val = new(Uint32Message)
+		case NXM_NX_REG4:
+			val = new(Uint32Message)
+		case NXM_NX_REG5:
+			val = new(Uint32Message)
+		case NXM_NX_REG6:
+			val = new(Uint32Message)
+		case NXM_NX_REG7:
+			val = new(Uint32Message)
+		case NXM_NX_REG8:
+			val = new(Uint32Message)
+		case NXM_NX_REG9:
+			val = new(Uint32Message)
+		case NXM_NX_REG10:
+			val = new(Uint32Message)
+		case NXM_NX_REG11:
+			val = new(Uint32Message)
+		case NXM_NX_REG12:
+			val = new(Uint32Message)
+		case NXM_NX_REG13:
+			val = new(Uint32Message)
+		case NXM_NX_REG14:
+			val = new(Uint32Message)
+		case NXM_NX_REG15:
+			val = new(Uint32Message)
+		case NXM_NX_TUN_ID:
+		case NXM_NX_ARP_SHA:
+		case NXM_NX_ARP_THA:
+		case NXM_NX_IPV6_SRC:
+		case NXM_NX_IPV6_DST:
+		case NXM_NX_ICMPV6_TYPE:
+		case NXM_NX_ICMPV6_CODE:
+		case NXM_NX_ND_TARGET:
+		case NXM_NX_ND_SLL:
+		case NXM_NX_ND_TLL:
+		case NXM_NX_IP_FRAG:
+		case NXM_NX_IPV6_LABEL:
+		case NXM_NX_IP_ECN:
+		case NXM_NX_IP_TTL:
+		case NXM_NX_MPLS_TTL:
 		case NXM_NX_TUN_IPV4_SRC:
 			val = new(TunnelIpv4SrcField)
 		case NXM_NX_TUN_IPV4_DST:
 			val = new(TunnelIpv4DstField)
+		case NXM_NX_PKT_MARK:
+		case NXM_NX_TCP_FLAGS:
+		case NXM_NX_DP_HASH:
+		case NXM_NX_RECIRC_ID:
+		case NXM_NX_CONJ_ID:
+			val = new(Uint32Message)
+		case NXM_NX_TUN_GBP_ID:
+		case NXM_NX_TUN_GBP_FLAGS:
+		case NXM_NX_TUN_METADAT0:
+		case NXM_NX_TUN_METADAT1:
+		case NXM_NX_TUN_METADAT2:
+		case NXM_NX_TUN_METADAT3:
+		case NXM_NX_TUN_METADAT4:
+		case NXM_NX_TUN_METADAT5:
+		case NXM_NX_TUN_METADAT6:
+		case NXM_NX_TUN_METADAT7:
+		case NXM_NX_TUN_FLAGS:
+		case NXM_NX_CT_STATE:
+			val = new(Uint32Message)
+		case NXM_NX_CT_ZONE:
+			val = new(Uint16Message)
+		case NXM_NX_CT_MARK:
+			val = new(Uint32Message)
+		case NXM_NX_CT_LABEL:
+			val = new(CTLabel)
+		case NXM_NX_TUN_IPV6_SRC:
 		default:
 			log.Printf("Unhandled Field: %d in Class: %d", field, class)
 			return nil, fmt.Errorf("Bad pkt class: %v field: %v data: %v", class, field, data)
 		}
 
-		val.UnmarshalBinary(data)
+		err := val.UnmarshalBinary(data)
+		if err != nil {
+			return nil, err
+		}
 		return val, nil
 	} else {
-		log.Panic("Unsupported match field: %d in class: %d", field, class)
+		log.Panicf("Unsupported match field: %d in class: %d", field, class)
 	}
 
 	return nil, nil
@@ -333,45 +441,61 @@ const (
 )
 
 const (
-	NXM_NX_REG0          = 0
-	NXM_NX_REG1          = 1
-	NXM_NX_REG2          = 2
-	NXM_NX_REG3          = 3
-	NXM_NX_REG4          = 4
-	NXM_NX_REG5          = 5
-	NXM_NX_REG6          = 6
-	NXM_NX_REG7          = 7
-	NXM_NX_TUN_ID        = 16
-	NXM_NX_ARP_SHA       = 17
-	NXM_NX_ARP_THA       = 18
-	NXM_NX_IPV6_SRC      = 19
-	NXM_NX_IPV6_DST      = 20
-	NXM_NX_ICMPV6_TYPE   = 21
-	NXM_NX_ICMPV6_CODE   = 22
-	NXM_NX_ND_TARGET     = 23
-	NXM_NX_ND_SLL        = 24
-	NXM_NX_ND_TLL        = 25
-	NXM_NX_IP_FRAG       = 26
-	NXM_NX_IPV6_LABEL    = 27
-	NXM_NX_IP_ECN        = 28
-	NXM_NX_IP_TTL        = 29
-	NXM_NX_MPLS_TTL      = 30
-	NXM_NX_TUN_IPV4_SRC  = 31
-	NXM_NX_TUN_IPV4_DST  = 32
-	NXM_NX_PKT_MARK      = 33
-	NXM_NX_TCP_FLAGS     = 34
+	NXM_NX_REG0          = 0  /* nicira extension: reg0 */
+	NXM_NX_REG1          = 1  /* nicira extension: reg1 */
+	NXM_NX_REG2          = 2  /* nicira extension: reg2 */
+	NXM_NX_REG3          = 3  /* nicira extension: reg3 */
+	NXM_NX_REG4          = 4  /* nicira extension: reg4 */
+	NXM_NX_REG5          = 5  /* nicira extension: reg5 */
+	NXM_NX_REG6          = 6  /* nicira extension: reg6 */
+	NXM_NX_REG7          = 7  /* nicira extension: reg7 */
+	NXM_NX_REG8          = 8  /* nicira extension: reg8 */
+	NXM_NX_REG9          = 9  /* nicira extension: reg9 */
+	NXM_NX_REG10         = 10 /* nicira extension: reg10 */
+	NXM_NX_REG11         = 11 /* nicira extension: reg11 */
+	NXM_NX_REG12         = 12 /* nicira extension: reg12 */
+	NXM_NX_REG13         = 13 /* nicira extension: reg13 */
+	NXM_NX_REG14         = 14 /* nicira extension: reg14 */
+	NXM_NX_REG15         = 15 /* nicira extension: reg15 */
+	NXM_NX_TUN_ID        = 16 /* nicira extension: tun_id, VNI */
+	NXM_NX_ARP_SHA       = 17 /* nicira extension: arp_sha, ARP Source Ethernet Address */
+	NXM_NX_ARP_THA       = 18 /* nicira extension: arp_tha, ARP Target Ethernet Address */
+	NXM_NX_IPV6_SRC      = 19 /* nicira extension: tun_ipv6_src, IPv6 source address */
+	NXM_NX_IPV6_DST      = 20 /* nicira extension: tun_ipv6_src, IPv6 destination address */
+	NXM_NX_ICMPV6_TYPE   = 21 /* nicira extension: icmpv6_type, ICMPv6 type */
+	NXM_NX_ICMPV6_CODE   = 22 /* nicira extension: icmpv6_code, ICMPv6 code */
+	NXM_NX_ND_TARGET     = 23 /* nicira extension: nd_target, ICMPv6 neighbor discovery source ethernet address*/
+	NXM_NX_ND_SLL        = 24 /* nicira extension: nd_sll, ICMPv6 neighbor discovery source ethernet address*/
+	NXM_NX_ND_TLL        = 25 /* nicira extension: nd_tll, ICMPv6 neighbor discovery target ethernet address */
+	NXM_NX_IP_FRAG       = 26 /* nicira extension: ip_frag, IP fragments */
+	NXM_NX_IPV6_LABEL    = 27 /* nicira extension: ipv6_label, least 20 bits hold flow label from IPv6 header, others are zero*/
+	NXM_NX_IP_ECN        = 28 /* nicira extension: nw_ecn, TOS byte with DSCP bits cleared to 0 */
+	NXM_NX_IP_TTL        = 29 /* nicira extension: nw_ttl, time-to-live field */
+	NXM_NX_MPLS_TTL      = 30 /* nicira extension: mpls_ttl, time-to-live field from MPLS label */
+	NXM_NX_TUN_IPV4_SRC  = 31 /* nicira extension: tun_src, src IPv4 address of tunnel */
+	NXM_NX_TUN_IPV4_DST  = 32 /* nicira extension: tun_dst, dst IPv4 address of tunnel */
+	NXM_NX_PKT_MARK      = 33 /* nicira extension: pkg_mark, packet mark from Linux kernal */
+	NXM_NX_TCP_FLAGS     = 34 /* nicira extension: tcp_flags */
 	NXM_NX_DP_HASH       = 35
-	NXM_NX_RECIRC_ID     = 36
-	NXM_NX_CONJ_ID       = 37
-	NXM_NX_TUN_GBP_ID    = 38
-	NXM_NX_TUN_GBP_FLAGS = 39
-	NXM_NX_TUN_FLAGS     = 104
-	NXM_NX_CT_STATE      = 105
-	NXM_NX_CT_ZONE       = 106
-	NXM_NX_CT_MARK       = 107
-	NXM_NX_CT_LABEL      = 108
-	NXM_NX_TUN_IPV6_SRC  = 109
-	NXM_NX_TUN_IPV6_DST  = 110
+	NXM_NX_RECIRC_ID     = 36  /* nicira extension: recirc_id, used with ct */
+	NXM_NX_CONJ_ID       = 37  /* nicira extension: conj_id, conjunction ID for conjunctive match */
+	NXM_NX_TUN_GBP_ID    = 38  /* nicira extension: tun_gbp_id, GBP policy ID */
+	NXM_NX_TUN_GBP_FLAGS = 39  /* nicira extension: tun_gbp_flags, GBP policy Flags*/
+	NXM_NX_TUN_METADAT0  = 40  /* nicira extension: tun_metadata for Geneve header variable data */
+	NXM_NX_TUN_METADAT1  = 41  /* nicira extension: tun_metadata, for Geneve header variable data */
+	NXM_NX_TUN_METADAT2  = 42  /* nicira extension: tun_metadata, for Geneve header variable data */
+	NXM_NX_TUN_METADAT3  = 43  /* nicira extension: tun_metadata for Geneve header variable data */
+	NXM_NX_TUN_METADAT4  = 44  /* nicira extension: tun_metadata, for Geneve header variable data */
+	NXM_NX_TUN_METADAT5  = 45  /* nicira extension: tun_metadata, for Geneve header variable data */
+	NXM_NX_TUN_METADAT6  = 46  /* nicira extension: tun_metadata, for Geneve header variable data */
+	NXM_NX_TUN_METADAT7  = 47  /* nicira extension: tun_metadata, for Geneve header variable data */
+	NXM_NX_TUN_FLAGS     = 104 /* nicira extension: tunnel Flags */
+	NXM_NX_CT_STATE      = 105 /* nicira extension: ct_state for conn_track */
+	NXM_NX_CT_ZONE       = 106 /* nicira extension: ct_zone for conn_track */
+	NXM_NX_CT_MARK       = 107 /* nicira extension: ct_mark for conn_track */
+	NXM_NX_CT_LABEL      = 108 /* nicira extension: ct_label for conn_track */
+	NXM_NX_TUN_IPV6_SRC  = 109 /* nicira extension: tun_dst_ipv6, dst IPv6 address of tunnel */
+	NXM_NX_TUN_IPV6_DST  = 110 /* nicira extension: tun_dst_ipv6, src IPv6 address of tunnel */
 )
 
 // IN_PORT field
@@ -935,7 +1059,7 @@ func (m *MetadataField) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-// Return a MatchField for tunel id matching
+// Return a MatchField for tunnel id matching
 func NewMetadataField(metadata uint64, metadataMask *uint64) *MatchField {
 	f := new(MatchField)
 	f.Class = OXM_CLASS_OPENFLOW_BASIC
