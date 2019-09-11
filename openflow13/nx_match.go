@@ -267,3 +267,67 @@ func NewConjIDMatchField(conjID uint32) *MatchField {
 
 	return field
 }
+
+func NewNxARPShaMatchField(addr net.HardwareAddr, mask net.HardwareAddr) *MatchField {
+	var field *MatchField
+	if mask != nil {
+		field, _ = FindFieldHeaderByName("NXM_NX_ARP_SHA", true)
+	} else {
+		field, _ = FindFieldHeaderByName("NXM_NX_ARP_SHA", false)
+	}
+
+	field.Value = &ArpXHaField{arpHa: addr}
+	if mask != nil {
+		field.Mask = &ArpXHaField{arpHa: mask}
+	}
+
+	return field
+}
+
+func NewNxARPThaMatchField(addr net.HardwareAddr, mask net.HardwareAddr) *MatchField {
+	var field *MatchField
+	if mask != nil {
+		field, _ = FindFieldHeaderByName("NXM_NX_ARP_THA", true)
+	} else {
+		field, _ = FindFieldHeaderByName("NXM_NX_ARP_THA", false)
+	}
+
+	field.Value = &ArpXHaField{arpHa: addr}
+	if mask != nil {
+		field.Mask = &ArpXHaField{arpHa: mask}
+	}
+
+	return field
+}
+
+func NewNxARPSpaMatchField(addr net.IP, mask net.IP) *MatchField {
+	var field *MatchField
+	if mask != nil {
+		field, _ = FindFieldHeaderByName("NXM_OF_ARP_SPA", true)
+	} else {
+		field, _ = FindFieldHeaderByName("NXM_OF_ARP_SPA", false)
+	}
+
+	field.Value = &ArpXPaField{ArpPa: addr}
+	if mask != nil {
+		field.Mask = &ArpXPaField{ArpPa: mask}
+	}
+
+	return field
+}
+
+func NewNxARPTpaMatchField(addr net.IP, mask net.IP) *MatchField {
+	var field *MatchField
+	if mask != nil {
+		field, _ = FindFieldHeaderByName("NXM_OF_ARP_TPA", true)
+	} else {
+		field, _ = FindFieldHeaderByName("NXM_OF_ARP_TPA", false)
+	}
+
+	field.Value = &ArpXPaField{ArpPa: addr}
+	if mask != nil {
+		field.Mask = &ArpXPaField{ArpPa: mask}
+	}
+
+	return field
+}

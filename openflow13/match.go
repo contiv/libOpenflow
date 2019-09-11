@@ -2,6 +2,7 @@ package openflow13
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -246,9 +247,13 @@ func DecodeMatchField(class uint16, field uint8, data []byte) (util.Message, err
 		case OXM_FIELD_ARP_OP:
 			val = new(ArpOperField)
 		case OXM_FIELD_ARP_SPA:
+			val = new(ArpXPaField)
 		case OXM_FIELD_ARP_TPA:
+			val = new(ArpXPaField)
 		case OXM_FIELD_ARP_SHA:
+			val = new(ArpXHaField)
 		case OXM_FIELD_ARP_THA:
+			val = new(ArpXHaField)
 		case OXM_FIELD_IPV6_SRC:
 			val = new(Ipv6SrcField)
 		case OXM_FIELD_IPV6_DST:
@@ -321,7 +326,9 @@ func DecodeMatchField(class uint16, field uint8, data []byte) (util.Message, err
 			val = new(Uint32Message)
 		case NXM_NX_TUN_ID:
 		case NXM_NX_ARP_SHA:
+			val = new(ArpXHaField)
 		case NXM_NX_ARP_THA:
+			val = new(ArpXHaField)
 		case NXM_NX_IPV6_SRC:
 		case NXM_NX_IPV6_DST:
 		case NXM_NX_ICMPV6_TYPE:
@@ -1321,5 +1328,102 @@ func NewTunnelIpv4DstField(tunnelIpDst net.IP, tunnelIpDstMask *net.IP) *MatchFi
 		f.Length += uint8(mask.Len())
 	}
 
+	return f
+}
+
+// ARP Host Address field message, used by arp_sha and arp_tha match
+type ArpXHaField struct {
+	arpHa net.HardwareAddr
+}
+
+func (m *ArpXHaField) Len() uint16 {
+	return 6
+}
+func (m *ArpXHaField) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, m.Len())
+	copy(data, m.arpHa)
+	return
+}
+
+func (m *ArpXHaField) UnmarshalBinary(data []byte) error {
+	if len(data) < int(m.Len()) {
+		return errors.New("The byte array has wrong size to unmarshal ArpXHaField message")
+	}
+	copy(m.arpHa, data[:6])
+	return nil
+}
+
+func NewArpThaField(arpTha net.HardwareAddr) *MatchField {
+	f := new(MatchField)
+	f.Class = OXM_CLASS_OPENFLOW_BASIC
+	f.Field = OXM_FIELD_ARP_THA
+	f.HasMask = false
+
+	arpThaField := new(ArpXHaField)
+	arpThaField.arpHa = arpTha
+	f.Value = arpThaField
+	f.Length = uint8(arpThaField.Len())
+	return f
+}
+
+func NewArpShaField(arpSha net.HardwareAddr) *MatchField {
+	f := new(MatchField)
+	f.Class = OXM_CLASS_OPENFLOW_BASIC
+	f.Field = OXM_FIELD_ARP_SHA
+	f.HasMask = false
+
+	arpXHAField := new(ArpXHaField)
+	arpXHAField.arpHa = arpSha
+	f.Value = arpXHAField
+	f.Length = uint8(arpXHAField.Len())
+	return f
+}
+
+// ARP Protocol Address field message, used by arp_spa and arp_tpa match
+type ArpXPaField struct {
+	ArpPa net.IP
+}
+
+func (m *ArpXPaField) Len() uint16 {
+	return 4
+}
+
+func (m *ArpXPaField) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, m.Len())
+	copy(data, m.ArpPa.To4())
+	return
+}
+
+func (m *ArpXPaField) UnmarshalBinary(data []byte) error {
+	if len(data) < int(m.Len()) {
+		return errors.New("The byte array has wrong size to unmarshal ArpXPaField message")
+	}
+	m.ArpPa = net.IPv4(data[0], data[1], data[2], data[3])
+	return nil
+}
+
+func NewArpTpaField(arpTpa net.IP) *MatchField {
+	f := new(MatchField)
+	f.Class = OXM_CLASS_OPENFLOW_BASIC
+	f.Field = OXM_FIELD_ARP_TPA
+	f.HasMask = false
+
+	arpTpaField := new(ArpXPaField)
+	arpTpaField.ArpPa = arpTpa
+	f.Value = arpTpaField
+	f.Length = uint8(arpTpaField.Len())
+	return f
+}
+
+func NewArpSpaField(arpSpa net.IP) *MatchField {
+	f := new(MatchField)
+	f.Class = OXM_CLASS_OPENFLOW_BASIC
+	f.Field = OXM_FIELD_ARP_SPA
+	f.HasMask = false
+
+	arpXPAField := new(ArpXPaField)
+	arpXPAField.ArpPa = arpSpa
+	f.Value = arpXPAField
+	f.Length = uint8(arpXPAField.Len())
 	return f
 }
