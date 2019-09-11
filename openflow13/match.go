@@ -1331,6 +1331,36 @@ func NewTunnelIpv4DstField(tunnelIpDst net.IP, tunnelIpDstMask *net.IP) *MatchFi
 	return f
 }
 
+// SCTP_DST field
+func NewSctpDstField(port uint16) *MatchField {
+	f := new(MatchField)
+	f.Class = OXM_CLASS_OPENFLOW_BASIC
+	f.Field = OXM_FIELD_SCTP_DST
+	f.HasMask = false
+
+	sctpDstField := new(PortField)
+	sctpDstField.port = port
+	f.Value = sctpDstField
+	f.Length = uint8(sctpDstField.Len())
+
+	return f
+}
+
+// SCTP_DST field
+func NewSctpSrcField(port uint16) *MatchField {
+	f := new(MatchField)
+	f.Class = OXM_CLASS_OPENFLOW_BASIC
+	f.Field = OXM_FIELD_SCTP_SRC
+	f.HasMask = false
+
+	sctpSrcField := new(PortField)
+	sctpSrcField.port = port
+	f.Value = sctpSrcField
+	f.Length = uint8(sctpSrcField.Len())
+
+	return f
+}
+
 // ARP Host Address field message, used by arp_sha and arp_tha match
 type ArpXHaField struct {
 	arpHa net.HardwareAddr
