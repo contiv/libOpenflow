@@ -76,7 +76,7 @@ func (s *CTStates) SetNew() {
 
 // ct_state = -new
 func (s *CTStates) UnsetNew() {
-	s.data |= 0 << NX_CT_STATE_NEW_OFS
+	s.data &^= 1 << NX_CT_STATE_NEW_OFS
 	s.mask |= 1 << NX_CT_STATE_NEW_OFS
 }
 
@@ -88,7 +88,7 @@ func (s *CTStates) SetEst() {
 
 // ct_state = -est
 func (s *CTStates) UnsetEst() {
-	s.data |= 0 << NX_CT_STATE_EST_OFS
+	s.data &^= 1 << NX_CT_STATE_EST_OFS
 	s.mask |= 1 << NX_CT_STATE_EST_OFS
 }
 
@@ -100,7 +100,7 @@ func (s *CTStates) SetRel() {
 
 // ct_state = -rel
 func (s *CTStates) UnsetRel() {
-	s.data |= 0 << NX_CT_STATE_REL_OFS
+	s.data &^= 1 << NX_CT_STATE_REL_OFS
 	s.mask |= 1 << NX_CT_STATE_REL_OFS
 }
 
@@ -112,7 +112,7 @@ func (s *CTStates) SetRpl() {
 
 // ct_state = -rpl
 func (s *CTStates) UnsetRpl() {
-	s.data |= 0 << NX_CT_STATE_RPL_OFS
+	s.data &^= 1 << NX_CT_STATE_RPL_OFS
 	s.mask |= 1 << NX_CT_STATE_RPL_OFS
 }
 
@@ -124,7 +124,7 @@ func (s *CTStates) SetInv() {
 
 // ct_state = -inv
 func (s *CTStates) UnsetInv() {
-	s.data |= 0 << NX_CT_STATE_INV_OFS
+	s.data &^= 1 << NX_CT_STATE_INV_OFS
 	s.mask |= 1 << NX_CT_STATE_INV_OFS
 }
 
@@ -136,7 +136,7 @@ func (s *CTStates) SetTrk() {
 
 // ct_state = -trk
 func (s *CTStates) UnsetTrk() {
-	s.data |= 0 << NX_CT_STATE_TRK_OFS
+	s.data &^= 1 << NX_CT_STATE_TRK_OFS
 	s.mask |= 1 << NX_CT_STATE_TRK_OFS
 }
 
@@ -148,7 +148,7 @@ func (s *CTStates) SetSNAT() {
 
 // ct_state = -snat
 func (s *CTStates) UnsetSNAT() {
-	s.data |= 0 << NX_CT_STATE_SNAT_OFS
+	s.data &^= 1 << NX_CT_STATE_SNAT_OFS
 	s.mask |= 1 << NX_CT_STATE_SNAT_OFS
 }
 
@@ -160,7 +160,7 @@ func (s *CTStates) SetDNAT() {
 
 // ct_state = -dnat
 func (s *CTStates) UnsetDNAT() {
-	s.data |= 0 << NX_CT_STATE_DNAT_OFS
+	s.data &^= 1 << NX_CT_STATE_DNAT_OFS
 	s.mask |= 1 << NX_CT_STATE_DNAT_OFS
 }
 
