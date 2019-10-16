@@ -204,7 +204,10 @@ func (instr *InstrActions) UnmarshalBinary(data []byte) error {
 
 	n := 8
 	for n < int(instr.Length) {
-		act, _ := DecodeAction(data[n:])
+		act, err := DecodeAction(data[n:])
+		if err != nil {
+			return err
+		}
 		instr.Actions = append(instr.Actions, act)
 		n += int(act.Len())
 	}

@@ -198,7 +198,10 @@ func (b *Bucket) UnmarshalBinary(data []byte) error {
 	n += 4 // for padding
 
 	for n < int(b.Length) {
-		a, _ := DecodeAction(data[n:])
+		a, err := DecodeAction(data[n:])
+		if err != nil {
+			return err
+		}
 		b.Actions = append(b.Actions, a)
 		n += int(a.Len())
 	}

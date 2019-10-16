@@ -3,14 +3,17 @@ package openflow13
 import (
 	"encoding/binary"
 	"errors"
-	"math"
 	"net"
 )
 
+// NX Action constants
 const (
-	NxExperimenterID     = 0x00002320 // Experimenter_ID for Nicira extension messages
+	NxExperimenterID     = 0x00002320 // Vendor ID for Nicira extension messages
 	NxActionHeaderLength = 10         // Length of Nicira extension message header
+)
 
+// NX Action subtypes
+const (
 	NXAST_RESUBMIT         = 1  // Nicira extended action: resubmit(port)
 	NXAST_SET_TUNNEL       = 2  // Nicira extended action: set_tunnel
 	NXAST_DROP_SPOOFED_ARP = 3  // Nicira extended action: drop spoofed arp packets
@@ -76,7 +79,7 @@ func (a *NXActionHeader) Len() (n uint16) {
 
 func (a *NXActionHeader) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, a.Len())
-	b := make([]byte, 0)
+	var b []byte
 	n := 0
 
 	b, err = a.ActionHeader.MarshalBinary()
@@ -90,7 +93,7 @@ func (a *NXActionHeader) MarshalBinary() (data []byte, err error) {
 
 func (a *NXActionHeader) UnmarshalBinary(data []byte) error {
 	if len(data) < int(NxActionHeaderLength) {
-		return errors.New("the byte array has wrong size to unmarshal an NXActionHeader message.")
+		return errors.New("the []byte is too short to unmarshal a full NXActionHeader message")
 	}
 	a.ActionHeader = new(ActionHeader)
 	n := 0
@@ -107,7 +110,72 @@ func NewNxActionHeader(subtype uint16) *NXActionHeader {
 	return &NXActionHeader{ActionHeader: actionHeader, Vendor: NxExperimenterID, Subtype: subtype}
 }
 
-// nxast_conjunction
+func DecodeNxAction(data []byte) Action {
+	var a Action
+	// Previous 8 bytes in the data includes type(2 byte), length(2 byte), and vendor(4 byte)
+	subtype := binary.BigEndian.Uint16(data[8:])
+	switch subtype {
+	case NXAST_RESUBMIT:
+		a = new(NXActionResubmit)
+	case NXAST_SET_TUNNEL:
+	case NXAST_DROP_SPOOFED_ARP:
+	case NXAST_SET_QUEUE:
+	case NXAST_POP_QUEUE:
+	case NXAST_REG_MOVE:
+		a = new(NXActionRegMove)
+	case NXAST_REG_LOAD:
+		a = new(NXActionRegLoad)
+	case NXAST_NOTE:
+	case NXAST_SET_TUNNEL_V6:
+	case NXAST_MULTIPATH:
+	case NXAST_AUTOPATH:
+	case NXAST_BUNDLE:
+	case NXAST_BUNDLE_LOAD:
+	case NXAST_RESUBMIT_TABLE:
+		a = new(NXActionResubmitTable)
+	case NXAST_OUTPUT_REG:
+		a = new(NXActionOutputReg)
+	case NXAST_LEARN:
+	case NXAST_EXIT:
+	case NXAST_DEC_TTL:
+		a = new(NXActionDecTTL)
+	case NXAST_FIN_TIMEOUT:
+	case NXAST_CONTROLLER:
+	case NXAST_DEC_TTL_CNT_IDS:
+		a = new(NXActionDecTTLCntIDs)
+	case NXAST_PUSH_MPLS:
+	case NXAST_POP_MPLS:
+	case NXAST_SET_MPLS_TTL:
+	case NXAST_DEC_MPLS_TTL:
+	case NXAST_STACK_PUSH:
+	case NXAST_STACK_POP:
+	case NXAST_SAMPLE:
+	case NXAST_SET_MPLS_LABEL:
+	case NXAST_SET_MPLS_TC:
+	case NXAST_OUTPUT_REG2:
+		a = new(NXActionOutputReg)
+	case NXAST_REG_LOAD2:
+	case NXAST_CNJUNCTION:
+		a = new(NXActionConjunction)
+	case NXAST_CT:
+		a = new(NXActionConnTrack)
+	case NXAST_NAT:
+		a = new(NXActionCTNAT)
+	case NXAST_CONTROLLER2:
+	case NXAST_SAMPLE2:
+	case NXAST_OUTPUT_TRUNC:
+	case NXAST_CT_CLEAR:
+	case NXAST_CT_RESUBMIT:
+		a = new(NXActionResubmitTable)
+		a.(*NXActionResubmitTable).withCT = true
+	case NXAST_RAW_ENCAP:
+	case NXAST_RAW_DECAP:
+	case NXAST_DEC_NSH_TTL:
+	}
+	return a
+}
+
+// NXActionConjunction is NX action to configure conjunctive match flows.
 type NXActionConjunction struct {
 	*NXActionHeader
 	Clause  uint8
@@ -115,7 +183,7 @@ type NXActionConjunction struct {
 	ID      uint32
 }
 
-// conjunction(ID, Clause/nclause)
+// NewNXActionConjunction creates NXActionConjunction, the action in flow entry is like conjunction(ID, Clause/nclause).
 func NewNXActionConjunction(clause uint8, nclause uint8, id uint32) *NXActionConjunction {
 	a := new(NXActionConjunction)
 	a.NXActionHeader = NewNxActionHeader(NXAST_CNJUNCTION)
@@ -132,16 +200,16 @@ func (a *NXActionConjunction) Len() (n uint16) {
 
 func (a *NXActionConjunction) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, int(a.Len()))
-	b := make([]byte, 0)
+	var b []byte
 	n := 0
 
 	b, err = a.NXActionHeader.MarshalBinary()
 	copy(data[n:], b)
 	n += len(b)
 	data[n] = a.Clause
-	n += 1
+	n++
 	data[n] = a.NClause
-	n += 1
+	n++
 	binary.BigEndian.PutUint32(data[n:], a.ID)
 	n += 4
 
@@ -154,18 +222,18 @@ func (a *NXActionConjunction) UnmarshalBinary(data []byte) error {
 	err := a.NXActionHeader.UnmarshalBinary(data[n:])
 	n += int(a.NXActionHeader.Len())
 	if len(data) < int(a.Len()) {
-		return errors.New("the byte array has wrong size to unmarshal an NXActionConjunction message")
+		return errors.New("the []byte is too short to unmarshal a full NXActionConjunction message")
 	}
 	a.Clause = uint8(data[n])
-	n += 1
+	n++
 	a.NClause = uint8(data[n])
-	n += 1
+	n++
 	a.ID = binary.BigEndian.Uint32(data[n:])
 
 	return err
 }
 
-// nx_action_conntrack
+// NXActionConnTrack is NX action for conntrack.
 type NXActionConnTrack struct {
 	*NXActionHeader
 	Flags        uint16
@@ -183,7 +251,7 @@ func (a *NXActionConnTrack) Len() (n uint16) {
 
 func (a *NXActionConnTrack) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, int(a.Length))
-	b := make([]byte, 0)
+	var b []byte
 	n := 0
 
 	b, err = a.NXActionHeader.MarshalBinary()
@@ -196,7 +264,7 @@ func (a *NXActionConnTrack) MarshalBinary() (data []byte, err error) {
 	binary.BigEndian.PutUint16(data[n:], a.ZoneOfsNbits)
 	n += 2
 	data[n] = a.RecircTable
-	n += 1
+	n++
 	copy(data[n:], a.pad)
 	n += 3
 	binary.BigEndian.PutUint16(data[n:], a.Alg)
@@ -219,7 +287,7 @@ func (a *NXActionConnTrack) UnmarshalBinary(data []byte) error {
 	err := a.NXActionHeader.UnmarshalBinary(data[n:])
 	n += int(a.NXActionHeader.Len())
 	if len(data) < int(a.Len()) {
-		return errors.New("the byte array has wrong size to unmarshal an NXActionConnTrack message")
+		return errors.New("the []byte is too short to unmarshal a full NXActionConnTrack message")
 	}
 	a.Flags = binary.BigEndian.Uint16(data[n:])
 	n += 2
@@ -228,7 +296,7 @@ func (a *NXActionConnTrack) UnmarshalBinary(data []byte) error {
 	a.ZoneOfsNbits = binary.BigEndian.Uint16(data[n:])
 	n += 2
 	a.RecircTable = data[n]
-	n += 1
+	n++
 	copy(a.pad, data[n:n+3])
 	n += 3
 	a.Alg = binary.BigEndian.Uint16(data[n:])
@@ -289,7 +357,7 @@ func NewNXActionConnTrack() *NXActionConnTrack {
 	return a
 }
 
-// nx_action_reg_load
+// NXActionRegLoad is NX action to load data to a specified field.
 type NXActionRegLoad struct {
 	*NXActionHeader
 	OfsNbits uint16
@@ -313,7 +381,7 @@ func (a *NXActionRegLoad) Len() (n uint16) {
 
 func (a *NXActionRegLoad) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, int(a.Len()))
-	b := make([]byte, 0)
+	var b []byte
 	n := 0
 
 	b, err = a.NXActionHeader.MarshalBinary()
@@ -336,7 +404,7 @@ func (a *NXActionRegLoad) UnmarshalBinary(data []byte) error {
 	err := a.NXActionHeader.UnmarshalBinary(data[n:])
 	n += int(a.NXActionHeader.Len())
 	if len(data) < int(a.Len()) {
-		return errors.New("the byte array has wrong size to unmarshal an NXActionRegLoad message")
+		return errors.New("the []byte is too short to unmarshal a full NXActionRegLoad message")
 	}
 	a.OfsNbits = binary.BigEndian.Uint16(data[n:])
 	n += 2
@@ -347,7 +415,7 @@ func (a *NXActionRegLoad) UnmarshalBinary(data []byte) error {
 	return err
 }
 
-// nx_action_reg_move
+// NXActionRegMove is NX action to move data from srcField to dstField.
 type NXActionRegMove struct {
 	*NXActionHeader
 	Nbits    uint16
@@ -375,7 +443,7 @@ func (a *NXActionRegMove) Len() (n uint16) {
 
 func (a *NXActionRegMove) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, a.Length)
-	b := make([]byte, 0)
+	var b []byte
 	n := 0
 
 	b, err = a.NXActionHeader.MarshalBinary()
@@ -404,7 +472,7 @@ func (a *NXActionRegMove) UnmarshalBinary(data []byte) error {
 	err := a.NXActionHeader.UnmarshalBinary(data[n:])
 	n += int(a.NXActionHeader.Len())
 	if len(data) < int(a.Len()) {
-		return errors.New("the byte array has wrong size to unmarshal an NXActionRegLoad message")
+		return errors.New("the []byte is too short to unmarshal a full NXActionRegLoad message")
 	}
 	a.Nbits = binary.BigEndian.Uint16(data[n:])
 	n += 2
@@ -420,6 +488,7 @@ func (a *NXActionRegMove) UnmarshalBinary(data []byte) error {
 	return err
 }
 
+// NXActionResubmit is NX action to resubmit packet to a specified in_port.
 type NXActionResubmit struct {
 	*NXActionHeader
 	InPort  uint16
@@ -443,7 +512,7 @@ func (a *NXActionResubmit) Len() (n uint16) {
 
 func (a *NXActionResubmit) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, int(a.Len()))
-	b := make([]byte, 0)
+	var b []byte
 	n := 0
 
 	b, err = a.NXActionHeader.MarshalBinary()
@@ -452,7 +521,8 @@ func (a *NXActionResubmit) MarshalBinary() (data []byte, err error) {
 	binary.BigEndian.PutUint16(data[n:], a.InPort)
 	n += 2
 	a.TableID = OFPTT_ALL
-	n += 1
+	n++
+	// Skip padding copy, move the index.
 	n += 3
 
 	return
@@ -464,14 +534,14 @@ func (a *NXActionResubmit) UnmarshalBinary(data []byte) error {
 	err := a.NXActionHeader.UnmarshalBinary(data[n:])
 	n += int(a.NXActionHeader.Len())
 	if len(data) < int(a.Len()) {
-		return errors.New("the byte array has wrong size to unmarshal an NXActionConjunction message")
+		return errors.New("the []byte is too short to unmarshal a full NXActionConjunction message")
 	}
 	a.InPort = binary.BigEndian.Uint16(data[n:])
 
 	return err
 }
 
-// nxast_resubmit_table
+// NXActionResubmitTable is NX action to resubmit packet to a specified table and in_port.
 type NXActionResubmitTable struct {
 	*NXActionHeader
 	InPort  uint16
@@ -492,7 +562,7 @@ func newNXActionResubmitTable() *NXActionResubmitTable {
 
 func newNXActionResubmitTableCT() *NXActionResubmitTable {
 	a := &NXActionResubmitTable{
-		NXActionHeader: NewNxActionHeader(NXAST_RESUBMIT_TABLE),
+		NXActionHeader: NewNxActionHeader(NXAST_CT_RESUBMIT),
 		withCT:         true,
 		pad:            [3]byte{},
 	}
@@ -500,10 +570,10 @@ func newNXActionResubmitTableCT() *NXActionResubmitTable {
 	return a
 }
 
-func NewNXActionResubmitTableAction(inPort uint16, tableId uint8) *NXActionResubmitTable {
+func NewNXActionResubmitTableAction(inPort uint16, tableID uint8) *NXActionResubmitTable {
 	a := newNXActionResubmitTable()
 	a.InPort = inPort
-	a.TableID = tableId
+	a.TableID = tableID
 	return a
 }
 
@@ -517,7 +587,7 @@ func (a *NXActionResubmitTable) Len() (n uint16) {
 
 func (a *NXActionResubmitTable) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, int(a.Len()))
-	b := make([]byte, 0)
+	var b []byte
 	n := 0
 
 	b, err = a.NXActionHeader.MarshalBinary()
@@ -526,7 +596,8 @@ func (a *NXActionResubmitTable) MarshalBinary() (data []byte, err error) {
 	binary.BigEndian.PutUint16(data[n:], a.InPort)
 	n += 2
 	data[n] = a.TableID
-	n += 1
+	n++
+	// Skip padding copy, move the index.
 	n += 3
 
 	return
@@ -538,31 +609,33 @@ func (a *NXActionResubmitTable) UnmarshalBinary(data []byte) error {
 	err := a.NXActionHeader.UnmarshalBinary(data[n:])
 	n += int(a.NXActionHeader.Len())
 	if len(data) < int(a.Len()) {
-		return errors.New("the byte array has wrong size to unmarshal an NXActionResubmitTable message")
+		return errors.New("the []byte is too short to unmarshal a full NXActionResubmitTable message")
 	}
 	a.InPort = binary.BigEndian.Uint16(data[n:])
 	n += 2
 	a.TableID = data[n]
-	n += 1
+	n++
+	// Skip padding copy, move the index.
+	n += 3
 
 	return err
 }
 
-func NewNXActionResubmitTableCT(inPort uint16, tableId uint8) *NXActionResubmitTable {
+func NewNXActionResubmitTableCT(inPort uint16, tableID uint8) *NXActionResubmitTable {
 	a := newNXActionResubmitTableCT()
 	a.InPort = inPort
-	a.TableID = tableId
+	a.TableID = tableID
 	return a
 }
 
-func NewNXActionResubmitTableCTNoInPort(tableId uint8) *NXActionResubmitTable {
+func NewNXActionResubmitTableCTNoInPort(tableID uint8) *NXActionResubmitTable {
 	a := newNXActionResubmitTableCT()
 	a.InPort = OFPP_IN_PORT
-	a.TableID = tableId
+	a.TableID = tableID
 	return a
 }
 
-// nxast_resubmit_table
+// NXActionCTNAT is NX action to set NAT in conntrack.
 type NXActionCTNAT struct {
 	*NXActionHeader
 	pad          []byte // 2 bytes
@@ -581,43 +654,16 @@ func NewNXActionCTNAT() *NXActionCTNAT {
 	a := new(NXActionCTNAT)
 	a.NXActionHeader = NewNxActionHeader(NXAST_NAT)
 	a.Length = 16
-	a.pad = make([]byte, 2, 2)
+	a.pad = make([]byte, 2)
 	return a
 }
 
 func (a *NXActionCTNAT) Len() (n uint16) {
-	a.Length = uint16(math.Ceil(float64(a.Length)/float64(8))) * 8
+	a.Length = ((a.Length + 7) / 8) * 8
 	return a.Length
 }
 
 func (a *NXActionCTNAT) MarshalBinary() (data []byte, err error) {
-	optData := make([]byte, 0)
-	optN := 0
-	if a.rangeIPv4Min != nil {
-		optData = append(optData[optN:], a.rangeIPv4Min.To4()...)
-		optN += 4
-	}
-	if a.rangeIPv4Max != nil {
-		optData = append(optData[optN:], a.rangeIPv4Max.To4()...)
-		optN += 4
-	}
-	if a.rangeIPv6Min != nil {
-		optData = append(optData[optN:], a.rangeIPv6Min.To16()...)
-		optN += 16
-	}
-	if a.rangeIPv6Max != nil {
-		optData = append(optData[optN:], a.rangeIPv6Max.To16()...)
-		optN += 16
-	}
-	if a.rangeProtoMin != nil {
-		binary.BigEndian.PutUint16(optData[optN:], *a.rangeProtoMin)
-		optN += 2
-	}
-	if a.rangeProtoMin != nil {
-		binary.BigEndian.PutUint16(optData[optN:], *a.rangeProtoMax)
-		optN += 2
-	}
-
 	data = make([]byte, a.Len())
 	b := make([]byte, a.NXActionHeader.Len())
 	n := 0
@@ -625,28 +671,44 @@ func (a *NXActionCTNAT) MarshalBinary() (data []byte, err error) {
 	b, err = a.NXActionHeader.MarshalBinary()
 	copy(data[n:], b)
 	n += len(b)
-	copy(data[n:], a.pad)
+	// Skip padding bytes
 	n += 2
 	binary.BigEndian.PutUint16(data[n:], a.Flags)
 	n += 2
 	binary.BigEndian.PutUint16(data[n:], a.rangePresent)
 	n += 2
-	copy(data[n:], optData)
-	n += optN
 
-	// padding the message if the length is not an integer multiple of 8 bytes
-	if n < int(a.Length) {
-		var padN = int(a.Length) - n
-		pad := make([]byte, padN, padN)
-		copy(optData, pad)
-		a.Length = a.Len()
+	if a.rangeIPv4Min != nil {
+		copy(data[n:], a.rangeIPv4Min.To4())
+		n += 4
 	}
+	if a.rangeIPv4Max != nil {
+		copy(data[n:], a.rangeIPv4Max.To4())
+		n += 4
+	}
+	if a.rangeIPv6Min != nil {
+		copy(data[n:], a.rangeIPv6Min.To16())
+		n += 16
+	}
+	if a.rangeIPv6Max != nil {
+		copy(data[n:], a.rangeIPv6Max.To16())
+		n += 16
+	}
+	if a.rangeProtoMin != nil {
+		binary.BigEndian.PutUint16(data[n:], *a.rangeProtoMin)
+		n += 2
+	}
+	if a.rangeProtoMin != nil {
+		binary.BigEndian.PutUint16(data[n:], *a.rangeProtoMax)
+		n += 2
+	}
+
 	return
 }
 
 func (a *NXActionCTNAT) SetSNAT() error {
-	if a.Flags&(^uint16(NX_NAT_F_MASK)) != 0 || a.Flags&NX_NAT_F_DST != 0 {
-		return errors.New("SNAT action should be exclusively with DNAT")
+	if a.Flags&NX_NAT_F_DST != 0 {
+		return errors.New("the SNAT and DNAT actions should be mutually exclusive")
 	}
 	a.Flags |= NX_NAT_F_SRC
 	return nil
@@ -654,7 +716,7 @@ func (a *NXActionCTNAT) SetSNAT() error {
 
 func (a *NXActionCTNAT) SetDNAT() error {
 	if a.Flags&NX_NAT_F_SRC != 0 {
-		return errors.New("DNAT action should be exclusively with SNAT")
+		return errors.New("the DNAT and SNAT actions should be mutually exclusive")
 	}
 	a.Flags |= NX_NAT_F_DST
 	return nil
@@ -662,7 +724,7 @@ func (a *NXActionCTNAT) SetDNAT() error {
 
 func (a *NXActionCTNAT) SetProtoHash() error {
 	if a.Flags&NX_NAT_F_PROTO_RANDOM != 0 {
-		return errors.New("protocol hash should be exclusively with random")
+		return errors.New("protocol hash and random should be mutually exclusive")
 	}
 	a.Flags |= NX_NAT_F_PROTO_HASH
 	return nil
@@ -670,7 +732,7 @@ func (a *NXActionCTNAT) SetProtoHash() error {
 
 func (a *NXActionCTNAT) SetRandom() error {
 	if a.Flags&NX_NAT_F_PROTO_HASH != 0 {
-		return errors.New("random should be exclusively with protocol hash")
+		return errors.New("random and protocol hash should be mutually exclusive")
 	}
 	a.Flags |= NX_NAT_F_PROTO_RANDOM
 	return nil
@@ -718,9 +780,9 @@ func (a *NXActionCTNAT) UnmarshalBinary(data []byte) error {
 	err := a.NXActionHeader.UnmarshalBinary(data[n:])
 	n += int(a.NXActionHeader.Len())
 	if len(data) < int(a.Len()) {
-		return errors.New("the byte array has wrong size to unmarshal an NXActionCTNAT message")
+		return errors.New("the []byte is too short to unmarshal a full NXActionCTNAT message")
 	}
-	copy(a.pad, data[n:n+2])
+	// Skip padding bytes
 	n += 2
 	a.Flags = binary.BigEndian.Uint16(data[n:])
 	n += 2
@@ -751,20 +813,20 @@ func (a *NXActionCTNAT) UnmarshalBinary(data []byte) error {
 	}
 	if a.rangePresent&NX_NAT_RANGE_PROTO_MAX != 0 {
 		portMax := binary.BigEndian.Uint16(data[n:])
-		a.rangeProtoMin = &portMax
+		a.rangeProtoMax = &portMax
 		n += 2
 	}
 
 	return err
 }
 
-// nx_action_output_reg
+// NXActionOutputReg is NX action to output to a field with a specified range.
 type NXActionOutputReg struct {
 	*NXActionHeader
 	OfsNbits uint16      // (ofs << 6 | (Nbits -1)
 	SrcField *MatchField // source nxm_nx_reg
 	MaxLen   uint16      // Max length to send to controller if chosen port is OFPP_CONTROLLER
-	zero     []uint8     // 6 uint8 with all Value as 0, reserved
+	zero     [6]uint8    // 6 uint8 with all Value as 0, reserved
 }
 
 func (a *NXActionOutputReg) Len() (n uint16) {
@@ -773,7 +835,7 @@ func (a *NXActionOutputReg) Len() (n uint16) {
 
 func (a *NXActionOutputReg) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, int(a.Len()))
-	b := make([]byte, 0)
+	var b []byte
 	n := 0
 
 	b, err = a.NXActionHeader.MarshalBinary()
@@ -786,7 +848,7 @@ func (a *NXActionOutputReg) MarshalBinary() (data []byte, err error) {
 	n += 4
 	binary.BigEndian.PutUint16(data[n:], a.MaxLen)
 	n += 2
-	copy(data[n:], a.zero)
+	copy(data[n:], a.zero[0:])
 	n += 6
 
 	return
@@ -798,7 +860,7 @@ func (a *NXActionOutputReg) UnmarshalBinary(data []byte) error {
 	err := a.NXActionHeader.UnmarshalBinary(data[n:])
 	n += int(a.NXActionHeader.Len())
 	if len(data) < int(a.Len()) {
-		return errors.New("the byte array has wrong size to unmarshal an NXActionOutputReg message")
+		return errors.New("the []byte is too short to unmarshal a full NXActionOutputReg message")
 	}
 	a.OfsNbits = binary.BigEndian.Uint16(data[n:])
 	n += 2
@@ -812,7 +874,7 @@ func (a *NXActionOutputReg) UnmarshalBinary(data []byte) error {
 func newNXActionOutputReg() *NXActionOutputReg {
 	a := &NXActionOutputReg{
 		NXActionHeader: NewNxActionHeader(NXAST_OUTPUT_REG),
-		zero:           make([]uint8, 6, 6),
+		zero:           [6]uint8{},
 	}
 	a.Length = 24
 	return a
@@ -846,7 +908,7 @@ func (a *NXActionDecTTL) Len() (n uint16) {
 
 func (a *NXActionDecTTL) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, int(a.Len()))
-	b := make([]byte, 0)
+	var b []byte
 	n := 0
 
 	b, err = a.NXActionHeader.MarshalBinary()
@@ -864,7 +926,7 @@ func (a *NXActionDecTTL) UnmarshalBinary(data []byte) error {
 	err := a.NXActionHeader.UnmarshalBinary(data[n:])
 	n += int(a.NXActionHeader.Len())
 	if len(data) < int(a.Len()) {
-		return errors.New("the byte array has wrong size to unmarshal an NXActionRegLoad2 message")
+		return errors.New("the []byte is too short to unmarshal a full NXActionRegLoad2 message")
 	}
 	a.controllers = binary.BigEndian.Uint16(data[n:])
 	n += 2
@@ -894,7 +956,7 @@ func (a *NXActionDecTTLCntIDs) Len() (n uint16) {
 
 func (a *NXActionDecTTLCntIDs) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, int(a.Len()))
-	b := make([]byte, 0)
+	var b []byte
 	n := 0
 
 	b, err = a.NXActionHeader.MarshalBinary()

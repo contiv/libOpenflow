@@ -6,6 +6,7 @@ import (
 )
 
 const (
+	// OFPP_IN_PORT is the default number of in_port field in resubmit actions.
 	OFPP_IN_PORT = 0xfff8
 )
 
@@ -28,7 +29,7 @@ const (
 	NX_CT_RECIRC_NONE = 0xff
 )
 
-// NX_NAT_RANGE Flags
+// NX_NAT_RANGE flags
 const (
 	NX_NAT_RANGE_IPV4_MIN  = 1 << 0
 	NX_NAT_RANGE_IPV4_MAX  = 1 << 1
@@ -38,6 +39,7 @@ const (
 	NX_NAT_RANGE_PROTO_MAX = 1 << 5
 )
 
+// NX_NAT flags
 const (
 	NX_NAT_F_SRC          = 1 << 0
 	NX_NAT_F_DST          = 1 << 1
@@ -47,6 +49,7 @@ const (
 	NX_NAT_F_MASK         = (NX_NAT_F_SRC | NX_NAT_F_DST | NX_NAT_F_PERSISTENT | NX_NAT_F_PROTO_HASH | NX_NAT_F_PROTO_RANDOM)
 )
 
+// NXM_OF fields. The class number of thses fields are 0x0000.
 const (
 	NXM_OF_IN_PORT uint8 = iota
 	NXM_OF_ETH_DST
@@ -206,8 +209,8 @@ func init() {
 	}
 }
 
+// FindFieldHeaderByName finds OXM/NXM field by name and mask.
 func FindFieldHeaderByName(fieldName string, hasMask bool) (*MatchField, error) {
-	var err = fmt.Errorf("failed to find header by name %s", fieldName)
 	fieldKey := strings.ToUpper(fieldName)
 	var fieldsMap map[string]*MatchField
 	if hasMask {
@@ -217,19 +220,19 @@ func FindFieldHeaderByName(fieldName string, hasMask bool) (*MatchField, error) 
 	}
 	field, found := fieldsMap[fieldKey]
 	if !found {
-		return nil, err
+		return nil, fmt.Errorf("failed to find header by name %s", fieldName)
 	}
 
 	return field, nil
 }
 
-// Encode the range to a uint16 number
+// encodeOfsNbitsStartEnd encodes the range to a uint16 number.
 func encodeOfsNbitsStartEnd(start uint16, end uint16) uint16 {
 	return (start << 6) + (end - start)
 }
 
-// Encode the range to a uint16 number
-// ofs is the start pos, nBits is the count of the range
+// Encode the range to a uint16 number.
+// ofs is the start pos, nBits is the count of the range.
 func encodeOfsNbits(ofs uint16, nBits uint16) uint16 {
 	return ofs<<6 | (nBits - 1)
 }
@@ -242,14 +245,17 @@ func decodeNbits(ofsBnits uint16) uint16 {
 	return (ofsBnits & 0x3f) + 1
 }
 
+// NewNXRange creates a NXRange using start and end number.
 func NewNXRange(start int, end int) *NXRange {
 	return &NXRange{start: start, end: end}
 }
 
+// NewNXRangeByOfsNBits creates a NXRange using offshift and bit count.
 func NewNXRangeByOfsNBits(ofs int, nBits int) *NXRange {
 	return &NXRange{start: ofs, end: ofs + nBits - 1}
 }
 
+// ToUint32Mask generates a uint32 number mask from NXRange.
 func (n *NXRange) ToUint32Mask() uint32 {
 	start := n.start
 	maxLength := 32
@@ -265,14 +271,17 @@ func (n *NXRange) ToUint32Mask() uint32 {
 	return mask1
 }
 
+// ToOfsBits encodes the NXRange to a uint16 number to identify offshift and bits count.
 func (n *NXRange) ToOfsBits() uint16 {
 	return encodeOfsNbitsStartEnd(uint16(n.start), uint16(n.end))
 }
 
+// GetOfs returns the offshift number from NXRange.
 func (n *NXRange) GetOfs() uint16 {
 	return uint16(n.start)
 }
 
+// GetNbits returns the bits count from NXRange.
 func (n *NXRange) GetNbits() uint16 {
 	return uint16(n.end - n.start + 1)
 }

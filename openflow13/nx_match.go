@@ -27,7 +27,7 @@ func (m *Uint16Message) MarshalBinary() (data []byte, err error) {
 
 func (m *Uint16Message) UnmarshalBinary(data []byte) error {
 	if len(data) < 2 {
-		return errors.New("the byte array has wrong size to unmarshal Uint16Message")
+		return errors.New("the []byte is too short to unmarshal a full Uint16Message")
 	}
 	m.data = binary.BigEndian.Uint16(data[:2])
 	return nil
@@ -53,7 +53,7 @@ func (m *Uint32Message) MarshalBinary() (data []byte, err error) {
 
 func (m *Uint32Message) UnmarshalBinary(data []byte) error {
 	if len(data) < 4 {
-		return errors.New("the byte array has wrong size to unmarshal Uint16Message")
+		return errors.New("the []byte is too short to unmarshal a full Uint32Message")
 	}
 	m.data = binary.BigEndian.Uint32(data[:4])
 	return nil
@@ -68,97 +68,97 @@ func NewCTStates() *CTStates {
 	return new(CTStates)
 }
 
-// ct_state = +new
+// SetNew sets ct_state as "+new".
 func (s *CTStates) SetNew() {
 	s.data |= 1 << 0
 	s.mask |= 1 << 0
 }
 
-// ct_state = -new
+// UnsetNew sets ct_state as "-new".
 func (s *CTStates) UnsetNew() {
 	s.data &^= 1 << NX_CT_STATE_NEW_OFS
 	s.mask |= 1 << NX_CT_STATE_NEW_OFS
 }
 
-// ct_state = +est
+// SetEst sets ct_state as "+est".
 func (s *CTStates) SetEst() {
 	s.data |= 1 << NX_CT_STATE_EST_OFS
 	s.mask |= 1 << NX_CT_STATE_EST_OFS
 }
 
-// ct_state = -est
+// UnsetEst sets ct_state as "-est".
 func (s *CTStates) UnsetEst() {
 	s.data &^= 1 << NX_CT_STATE_EST_OFS
 	s.mask |= 1 << NX_CT_STATE_EST_OFS
 }
 
-// ct_state = +rel
+// SetRel sets ct_state as "+rel".
 func (s *CTStates) SetRel() {
 	s.data |= 1 << NX_CT_STATE_REL_OFS
 	s.mask |= 1 << NX_CT_STATE_REL_OFS
 }
 
-// ct_state = -rel
+// UnsetRel sets ct_state as "-rel".
 func (s *CTStates) UnsetRel() {
 	s.data &^= 1 << NX_CT_STATE_REL_OFS
 	s.mask |= 1 << NX_CT_STATE_REL_OFS
 }
 
-// ct_state = +rpl
+// SetRpl sets ct_state as "+rpl".
 func (s *CTStates) SetRpl() {
 	s.data |= 1 << NX_CT_STATE_RPL_OFS
 	s.mask |= 1 << NX_CT_STATE_RPL_OFS
 }
 
-// ct_state = -rpl
+// UnsetRpl sets ct_state as "-rpl".
 func (s *CTStates) UnsetRpl() {
 	s.data &^= 1 << NX_CT_STATE_RPL_OFS
 	s.mask |= 1 << NX_CT_STATE_RPL_OFS
 }
 
-// ct_state = +inv
+// SetInv sets ct_state as "+inv".
 func (s *CTStates) SetInv() {
 	s.data |= 1 << NX_CT_STATE_INV_OFS
 	s.mask |= 1 << NX_CT_STATE_INV_OFS
 }
 
-// ct_state = -inv
+// UnsetInv sets ct_state as "-inv".
 func (s *CTStates) UnsetInv() {
 	s.data &^= 1 << NX_CT_STATE_INV_OFS
 	s.mask |= 1 << NX_CT_STATE_INV_OFS
 }
 
-// ct_state = +trk
+// SetTrk sets ct_state as "+trk".
 func (s *CTStates) SetTrk() {
 	s.data |= 1 << NX_CT_STATE_TRK_OFS
 	s.mask |= 1 << NX_CT_STATE_TRK_OFS
 }
 
-// ct_state = -trk
+// UnsetTrk sets ct_state as "-trk".
 func (s *CTStates) UnsetTrk() {
 	s.data &^= 1 << NX_CT_STATE_TRK_OFS
 	s.mask |= 1 << NX_CT_STATE_TRK_OFS
 }
 
-// ct_state = +snat
+// SetSNAT sets ct_state as "+snat".
 func (s *CTStates) SetSNAT() {
 	s.data |= 1 << NX_CT_STATE_SNAT_OFS
 	s.mask |= 1 << NX_CT_STATE_SNAT_OFS
 }
 
-// ct_state = -snat
+// UnsetSNAT sets ct_state as "-snat".
 func (s *CTStates) UnsetSNAT() {
 	s.data &^= 1 << NX_CT_STATE_SNAT_OFS
 	s.mask |= 1 << NX_CT_STATE_SNAT_OFS
 }
 
-// ct_state = +dnat
+// SetDNAT sets ct_state as "+dnat".
 func (s *CTStates) SetDNAT() {
 	s.data |= 1 << NX_CT_STATE_DNAT_OFS
 	s.mask |= 1 << NX_CT_STATE_DNAT_OFS
 }
 
-// ct_state = -dnat
+// UnsetDNAT sets ct_state as "-dnat".
 func (s *CTStates) UnsetDNAT() {
 	s.data &^= 1 << NX_CT_STATE_DNAT_OFS
 	s.mask |= 1 << NX_CT_STATE_DNAT_OFS

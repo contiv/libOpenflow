@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"net"
 	"testing"
 )
 
@@ -14,12 +15,12 @@ func TestNXActionResubmit(t *testing.T) {
 	action1 := NewNXActionResubmit(portID)
 	data1, err := action1.MarshalBinary()
 	if err != nil {
-		t.Errorf("Failed to invoke NXAST_RESUBMIT_TABLE.MarshalBinary: %v", err)
+		t.Fatalf("Failed to invoke NXAST_RESUBMIT.MarshalBinary: %v", err)
 	}
 	testAction1 := new(NXActionResubmitTable)
 	testAction1.UnmarshalBinary(data1)
 	if testAction1.InPort != portID {
-		t.Errorf("Failed to invoke NXAST_RESUBMIT_TABLE.UnmarshalBinary, expect: %x, actual: %x", portID, testAction1.InPort)
+		t.Errorf("Failed to invoke NXAST_RESUBMIT.UnmarshalBinary, expect: %x, actual: %x", portID, testAction1.InPort)
 	}
 
 	action2 := NewNXActionResubmitTableAction(portID, tableID)
@@ -28,7 +29,7 @@ func TestNXActionResubmit(t *testing.T) {
 	}
 	data2, err := action2.MarshalBinary()
 	if err != nil {
-		t.Errorf("Failed to invoke NXAST_RESUBMIT_TABLE.MarshalBinary: %v", err)
+		t.Fatalf("Failed to invoke NXAST_RESUBMIT_TABLE.MarshalBinary: %v", err)
 	}
 	testAction2 := newNXActionResubmitTable()
 	testAction2.UnmarshalBinary(data2)
@@ -45,7 +46,7 @@ func TestNXActionResubmit(t *testing.T) {
 	}
 	data3, err := action3.MarshalBinary()
 	if err != nil {
-		t.Errorf("Failed to invoke NXAST_RESUBMIT_TABLE.MarshalBinary: %v", err)
+		t.Fatalf("Failed to invoke NXAST_RESUBMIT_TABLE.MarshalBinary: %v", err)
 	}
 	testAction3 := newNXActionResubmitTable()
 	testAction3.UnmarshalBinary(data3)
@@ -59,7 +60,7 @@ func TestNXActionResubmit(t *testing.T) {
 	action4 := NewNXActionResubmitTableCT(portID, tableID)
 	data4, err := action4.MarshalBinary()
 	if err != nil {
-		t.Errorf("Failed to invoke NXAST_RESUBMIT_TABLE.MarshalBinary: %v", err)
+		t.Fatalf("Failed to invoke NXAST_RESUBMIT_TABLE.MarshalBinary: %v", err)
 	}
 	testAction4 := newNXActionResubmitTableCT()
 	testAction4.UnmarshalBinary(data4)
@@ -76,18 +77,18 @@ func TestNXActionResubmit(t *testing.T) {
 	action5 := NewNXActionResubmitTableCTNoInPort(tableID)
 	data5, err := action5.MarshalBinary()
 	if err != nil {
-		t.Errorf("Failed to invoke NXAST_RESUBMIT_TABLE.MarshalBinary: %v", err)
+		t.Fatalf("Failed to invoke NXAST_RESUBMIT_TABLE.MarshalBinary: %v", err)
 	}
 	testAction5 := newNXActionResubmitTableCT()
 	if !testAction5.IsCT() {
-		t.Error("Failed to invoke NXAST_RESUBMIT_TABLE.MarshalBinary")
+		t.Error("Failed to invoke NXAST_CT_RESUBMIT.MarshalBinary")
 	}
 	testAction5.UnmarshalBinary(data5)
 	if testAction5.TableID != tableID {
-		t.Errorf("Failed to invoke NXAST_RESUBMIT_TABLE_CT.UnmarshalBinary, expect: %x, actual: %x", tableID, testAction5.TableID)
+		t.Errorf("Failed to invoke NXAST_CT_RESUBMIT.UnmarshalBinary, expect: %x, actual: %x", tableID, testAction5.TableID)
 	}
 	if testAction5.InPort != OFPP_IN_PORT {
-		t.Errorf("Failed to invoke NXAST_RESUBMIT_TABLE_CT.UnmarshalBinary, expect: %x, actual: %x", portID, testAction5.InPort)
+		t.Errorf("Failed to invoke NXAST_CT_RESUBMIT.UnmarshalBinary, expect: %x, actual: %x", portID, testAction5.InPort)
 	}
 }
 
@@ -130,7 +131,7 @@ func TestUint32Message(t *testing.T) {
 		t.Errorf("Failed to invoke Uint32Message.UnmarshalBinary, %v", err)
 	}
 	if testMsg.data != tgtData {
-		t.Errorf("Failed to recover uint32 from Uint32Message, tgt: %d, actual: %d", tgtData, testMsg.data)
+		t.Errorf("Failed to retrieve uint32 from Uint32Message, tgt: %d, actual: %d", tgtData, testMsg.data)
 	}
 }
 
@@ -150,7 +151,7 @@ func TestUint16Message(t *testing.T) {
 		t.Errorf("Failed to invoke Uint32Message.UnmarshalBinary, %v", err)
 	}
 	if testMsg.data != tgtData {
-		t.Errorf("Failed to recover uint32 from Uint32Message, tgt: %d, actual: %d", tgtData, testMsg.data)
+		t.Errorf("Failed to retrieve uint32 from Uint32Message, tgt: %d, actual: %d", tgtData, testMsg.data)
 	}
 }
 
@@ -185,13 +186,55 @@ func TestCTLabel(t *testing.T) {
 		t.Errorf("Failed to MarshalBinary CTLabel: %v", err)
 	}
 	field2 := new(CTLabel)
-	field2.UnmarshalBinary(data)
+	err = field2.UnmarshalBinary(data)
+	if err != nil {
+		t.Errorf("Failed to UnmarshalBinary message: %v", err)
+	}
 	if field2.data != label {
-		t.Errorf("Failed to UnmarshalBinary CTLabel: %v", err)
+		t.Errorf("Unmarshalled CTLabel is incorrect, expect: %d, actual: %d", label, field2.data)
 	}
 
 	var mask = [16]byte{}
 	binary.BigEndian.PutUint32(mask[:], 0xffffffff)
+}
+
+func TestNXActionCTNAT(t *testing.T) {
+	act := NewNXActionCTNAT()
+	if err := act.SetSNAT(); err != nil {
+		t.Errorf("Failed to set SNAT action: %v", err)
+	}
+	if err := act.SetRandom(); err != nil {
+		t.Errorf("Failed to set random action: %v", err)
+	}
+	ipMin := net.ParseIP("10.0.0.200")
+	ipMax := net.ParseIP("10.0.0.240")
+	act.SetRangeIPv4Min(ipMin)
+	act.SetRangeIPv4Max(ipMax)
+	minPort := uint16(2048)
+	maxPort := uint16(10240)
+	act.SetRangeProtoMin(&minPort)
+	act.SetRangeProtoMax(&maxPort)
+	data, err := act.MarshalBinary()
+	if err != nil {
+		t.Errorf("Failed to Marshal NXActionCTNAT: %v", err)
+	}
+	act2 := new(NXActionCTNAT)
+	err = act2.UnmarshalBinary(data)
+	if err != nil {
+		t.Errorf("Failed to Unmarshal NXActionCTNAT: %v", err)
+	}
+	if act2.rangeIPv4Min.String() != ipMin.String() {
+		t.Errorf("Failed to set RangeIPv4Min, expect: %s, actual: %s", ipMin.String(), act2.rangeIPv4Min.String())
+	}
+	if act2.rangeIPv4Max.String() != ipMax.String() {
+		t.Errorf("Failed to set rangeIPv4Max, expect: %s, actual: %s", ipMax.String(), act2.rangeIPv4Max.String())
+	}
+	if *act2.rangeProtoMin != minPort {
+		t.Errorf("Failed to set SetRangeProtoMin, expect: %d, actual: %d", minPort, *act2.rangeProtoMin)
+	}
+	if *act2.rangeProtoMax != maxPort {
+		t.Errorf("Failed to set SetRangeProtoMax, expect: %d, actual: %d", maxPort, *act2.rangeProtoMax)
+	}
 }
 
 func TestNXActions(t *testing.T) {
@@ -358,19 +401,22 @@ func nxDecTTLCntIDsEquals(o1 Action, o2 Action, subtype uint16) bool {
 func testMatchFieldHeaderMarshalUnMarshal(tgtField *MatchField, t *testing.T) {
 	headerInt := tgtField.MarshalHeader()
 	testMFHeader := new(MatchField)
-	var data []byte = make([]byte, 4)
+	var data = make([]byte, 4)
 	binary.BigEndian.PutUint32(data, headerInt)
-	_ = testMFHeader.UnmarshalHeader(data)
+	err := testMFHeader.UnmarshalHeader(data)
+	if err != nil {
+		t.Errorf("Failed to UnmarshalHeader: %v", err)
+	}
 	if testMFHeader.Class != tgtField.Class {
-		t.Errorf("Failed to UnmarshalHeader: class")
+		t.Errorf("Unmarshalled header has incorrect 'Class' field, expect: %d, actual: %d", testMFHeader.Class, tgtField.Class)
 	}
 	if testMFHeader.Field != tgtField.Field {
-		t.Errorf("Failed to UnmarshalHeader: field, test: %d, tgt: %d", testMFHeader.Field, tgtField.Field)
+		t.Errorf("Unmarshalled header has incorrect 'Field' field, expect: %d, actual: %d", testMFHeader.Field, tgtField.Field)
 	}
 	if testMFHeader.HasMask != tgtField.HasMask {
-		t.Errorf("Failed to UnmarshalHeader: mask")
+		t.Errorf("Unmarshalled header has incorrect 'HasMask' field, expect: %v, actual: %v", testMFHeader.HasMask, tgtField.HasMask)
 	}
 	if testMFHeader.Length != tgtField.Length {
-		t.Errorf("Failed to UnmarshalHeader: length")
+		t.Errorf("Unmarshalled header has incorrect 'Length' field, expect: %d, actual: %d", testMFHeader.Length, tgtField.Length)
 	}
 }

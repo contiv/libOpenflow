@@ -188,14 +188,14 @@ func (m *MatchField) MarshalHeader() uint32 {
 func (m *MatchField) UnmarshalHeader(data []byte) error {
 	var err error
 	if len(data) < int(4) {
-		err = fmt.Errorf("the byte array has wrong size to unmarshal MatchField header")
+		err = fmt.Errorf("the []byte is too short to unmarshal MatchField header")
 		return err
 	}
 	n := 0
 	m.Class = binary.BigEndian.Uint16(data[n:])
 	n += 2
 	fieldWithMask := data[n]
-	m.HasMask = bool(fieldWithMask&1 == 1)
+	m.HasMask = fieldWithMask&1 == 1
 	m.Field = fieldWithMask >> 1
 	n += 1
 	m.Length = data[n] & 0xff
