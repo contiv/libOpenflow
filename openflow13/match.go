@@ -19,12 +19,13 @@ type Match struct {
 
 // One match field TLV
 type MatchField struct {
-	Class   uint16
-	Field   uint8
-	HasMask bool
-	Length  uint8
-	Value   util.Message
-	Mask    util.Message
+	Class          uint16
+	Field          uint8
+	HasMask        bool
+	Length         uint8
+	ExperimenterID uint32
+	Value          util.Message
+	Mask           util.Message
 }
 
 func NewMatch() *Match {
@@ -104,6 +105,9 @@ func (m *Match) AddField(f MatchField) {
 
 func (m *MatchField) Len() (n uint16) {
 	n = 4
+	if m.ExperimenterID != 0 {
+		n += 4
+	}
 	n += m.Value.Len()
 	if m.HasMask {
 		n += m.Mask.Len()
@@ -160,6 +164,16 @@ func (m *MatchField) UnmarshalBinary(data []byte) error {
 
 	m.Length = data[n]
 	n += 1
+
+	if m.Class == OXM_CLASS_EXPERIMENTER {
+		experimenterID := binary.BigEndian.Uint32(data[n:])
+		if experimenterID == ONF_EXPERIMENTER_ID {
+			n += 4
+			m.ExperimenterID = experimenterID
+		} else {
+			return fmt.Errorf("Unsupported experimenter id: %d in class: %d ", experimenterID, m.Class)
+		}
+	}
 
 	if m.Value, err = DecodeMatchField(m.Class, m.Field, data[n:]); err != nil {
 		return err
@@ -381,6 +395,17 @@ func DecodeMatchField(class uint16, field uint8, data []byte) (util.Message, err
 			return nil, err
 		}
 		return val, nil
+	} else if class == OXM_CLASS_EXPERIMENTER {
+		var val util.Message
+		switch field {
+		case OXM_FIELD_TCP_FLAGS:
+			val = new(TcpFlagsField)
+		}
+		err := val.UnmarshalBinary(data)
+		if err != nil {
+			return nil, err
+		}
+		return val, nil
 	} else {
 		log.Panicf("Unsupported match field: %d in class: %d", field, class)
 	}
@@ -400,6 +425,8 @@ const (
 	OXM_CLASS_NXM_1          = 0x0001 /* Backward compatibility with NXM */
 	OXM_CLASS_OPENFLOW_BASIC = 0x8000 /* Basic class for OpenFlow */
 	OXM_CLASS_EXPERIMENTER   = 0xFFFF /* Experimenter class */
+
+	ONF_EXPERIMENTER_ID = 0x4f4e4600 /* ONF Experimenter ID */
 )
 
 const (
