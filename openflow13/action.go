@@ -65,7 +65,7 @@ func (a *ActionHeader) UnmarshalBinary(data []byte) error {
 }
 
 // Decode Action types.
-func DecodeAction(data []byte) Action {
+func DecodeAction(data []byte) (Action, error) {
 	t := binary.BigEndian.Uint16(data[:2])
 	var a Action
 	switch t {
@@ -94,16 +94,29 @@ func DecodeAction(data []byte) Action {
 	case ActionType_SetNwTtl:
 		a = new(ActionNwTtl)
 	case ActionType_DecNwTtl:
-		a = new(ActionHeader)
+		a = new(ActionDecNwTtl)
 	case ActionType_SetField:
 		a = new(ActionSetField)
 	case ActionType_PushPbb:
 		a = new(ActionPush)
 	case ActionType_PopPbb:
 		a = new(ActionHeader)
+	case ActionType_Experimenter:
+		// For Experimenter message, the length of action should be at least 10 bytes,
+		// including type(2 byte), length(2 byte), vendor(4 byte), and subtype(2 byte)
+		if len(data) < NxActionHeaderLength {
+			return nil, errors.New("the []byte is too short to decode OpenFlow experimenter message")
+		}
+		v := binary.BigEndian.Uint32(data[4:8])
+		if v == NxExperimenterID {
+			a = DecodeNxAction(data)
+		}
 	}
-	a.UnmarshalBinary(data)
-	return a
+	err := a.UnmarshalBinary(data)
+	if err != nil {
+		return a, err
+	}
+	return a, nil
 }
 
 // Action structure for OFPAT_OUTPUT, which sends packets out ’port’.
@@ -260,6 +273,39 @@ type ActionMplsTtl struct {
 	ActionHeader
 	MplsTtl uint8
 	pad     []byte // 3bytes
+}
+
+type ActionDecNwTtl struct {
+	ActionHeader
+	pad []byte // 4bytes
+}
+
+func NewActionDecNwTtl() *ActionDecNwTtl {
+	act := new(ActionDecNwTtl)
+	act.Type = ActionType_DecNwTtl
+	act.Length = 8
+	act.pad = make([]byte, 4)
+	return act
+}
+
+func (a *ActionDecNwTtl) Len() (n uint16) {
+	return a.ActionHeader.Len() + 4
+}
+
+func (a *ActionDecNwTtl) MarshalBinary() (data []byte, err error) {
+	data, err = a.ActionHeader.MarshalBinary()
+	if err != nil {
+		return
+	}
+
+	// Padding
+	bytes := make([]byte, 4)
+	data = append(data, bytes...)
+	return
+}
+
+func (a *ActionDecNwTtl) UnmarshalBinary(data []byte) error {
+	return a.ActionHeader.UnmarshalBinary(data[:4])
 }
 
 type ActionNwTtl struct {
