@@ -46,7 +46,7 @@ const (
 	NXAST_SET_MPLS_TC      = 31 // Nicira extended action: set_mpls_tc
 	NXAST_OUTPUT_REG2      = 32 // Nicira extended action: output(port=port,max_len)
 	NXAST_REG_LOAD2        = 33 // Nicira extended action: load
-	NXAST_CNJUNCTION       = 34 // Nicira extended action: conjunction
+	NXAST_CONJUNCTION      = 34 // Nicira extended action: conjunction
 	NXAST_CT               = 35 // Nicira extended action: ct
 	NXAST_NAT              = 36 // Nicira extended action: nat, need to be along with ct action
 	NXAST_CONTROLLER2      = 37 // Nicira extended action: controller(userdata=xxx,pause)
@@ -155,7 +155,7 @@ func DecodeNxAction(data []byte) Action {
 	case NXAST_OUTPUT_REG2:
 		a = new(NXActionOutputReg)
 	case NXAST_REG_LOAD2:
-	case NXAST_CNJUNCTION:
+	case NXAST_CONJUNCTION:
 		a = new(NXActionConjunction)
 	case NXAST_CT:
 		a = new(NXActionConnTrack)
@@ -186,7 +186,7 @@ type NXActionConjunction struct {
 // NewNXActionConjunction creates NXActionConjunction, the action in flow entry is like conjunction(ID, Clause/nclause).
 func NewNXActionConjunction(clause uint8, nclause uint8, id uint32) *NXActionConjunction {
 	a := new(NXActionConjunction)
-	a.NXActionHeader = NewNxActionHeader(NXAST_CNJUNCTION)
+	a.NXActionHeader = NewNxActionHeader(NXAST_CONJUNCTION)
 	a.Length = a.NXActionHeader.Len() + 6
 	a.Clause = clause
 	a.NClause = nclause

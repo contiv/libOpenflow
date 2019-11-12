@@ -177,14 +177,9 @@ func newNXRegHeader(idx int, hasMask bool) *MatchField {
 
 func NewRegMatchField(idx int, data uint32, dataRng *NXRange) *MatchField {
 	var field *MatchField
-	if dataRng != nil {
-		field = newNXRegHeader(idx, true)
-	} else {
-		field = newNXRegHeader(idx, false)
-	}
+	field = newNXRegHeader(idx, dataRng != nil)
 
 	field.Value = newUint32Message(data)
-
 	if dataRng != nil {
 		field.Mask = newUint32Message(dataRng.ToUint32Mask())
 	}
@@ -206,13 +201,12 @@ func NewCTZoneMatchField(zone uint16) *MatchField {
 
 func NewCTMarkMatchField(mark uint32, mask *uint32) *MatchField {
 	var field *MatchField
-	if mask != nil {
-		field, _ = FindFieldHeaderByName("NXM_NX_CT_MARK", true)
-		field.Mask = newUint32Message(*mask)
-	} else {
-		field, _ = FindFieldHeaderByName("NXM_NX_CT_MARK", false)
-	}
+	field, _ = FindFieldHeaderByName("NXM_NX_CT_MARK", mask != nil)
+
 	field.Value = newUint32Message(mark)
+	if mask != nil {
+		field.Mask = newUint32Message(*mask)
+	}
 
 	return field
 }
@@ -250,13 +244,12 @@ func newCTLabel(data [16]byte) *CTLabel {
 
 func NewCTLabelMatchField(label [16]byte, mask *[16]byte) *MatchField {
 	var field *MatchField
-	if mask != nil {
-		field, _ = FindFieldHeaderByName("NXM_NX_CT_LABEL", true)
-		field.Mask = newCTLabel(*mask)
-	} else {
-		field, _ = FindFieldHeaderByName("NXM_NX_CT_LABEL", false)
-	}
+	field, _ = FindFieldHeaderByName("NXM_NX_CT_LABEL", mask != nil)
+
 	field.Value = newCTLabel(label)
+	if mask != nil {
+		field.Mask = newCTLabel(*mask)
+	}
 
 	return field
 }
@@ -270,11 +263,7 @@ func NewConjIDMatchField(conjID uint32) *MatchField {
 
 func NewNxARPShaMatchField(addr net.HardwareAddr, mask net.HardwareAddr) *MatchField {
 	var field *MatchField
-	if mask != nil {
-		field, _ = FindFieldHeaderByName("NXM_NX_ARP_SHA", true)
-	} else {
-		field, _ = FindFieldHeaderByName("NXM_NX_ARP_SHA", false)
-	}
+	field, _ = FindFieldHeaderByName("NXM_NX_ARP_SHA", mask != nil)
 
 	field.Value = &ArpXHaField{arpHa: addr}
 	if mask != nil {
@@ -286,11 +275,7 @@ func NewNxARPShaMatchField(addr net.HardwareAddr, mask net.HardwareAddr) *MatchF
 
 func NewNxARPThaMatchField(addr net.HardwareAddr, mask net.HardwareAddr) *MatchField {
 	var field *MatchField
-	if mask != nil {
-		field, _ = FindFieldHeaderByName("NXM_NX_ARP_THA", true)
-	} else {
-		field, _ = FindFieldHeaderByName("NXM_NX_ARP_THA", false)
-	}
+	field, _ = FindFieldHeaderByName("NXM_NX_ARP_THA", mask != nil)
 
 	field.Value = &ArpXHaField{arpHa: addr}
 	if mask != nil {
@@ -302,11 +287,7 @@ func NewNxARPThaMatchField(addr net.HardwareAddr, mask net.HardwareAddr) *MatchF
 
 func NewNxARPSpaMatchField(addr net.IP, mask net.IP) *MatchField {
 	var field *MatchField
-	if mask != nil {
-		field, _ = FindFieldHeaderByName("NXM_OF_ARP_SPA", true)
-	} else {
-		field, _ = FindFieldHeaderByName("NXM_OF_ARP_SPA", false)
-	}
+	field, _ = FindFieldHeaderByName("NXM_OF_ARP_SPA", mask != nil)
 
 	field.Value = &ArpXPaField{ArpPa: addr}
 	if mask != nil {
@@ -318,11 +299,7 @@ func NewNxARPSpaMatchField(addr net.IP, mask net.IP) *MatchField {
 
 func NewNxARPTpaMatchField(addr net.IP, mask net.IP) *MatchField {
 	var field *MatchField
-	if mask != nil {
-		field, _ = FindFieldHeaderByName("NXM_OF_ARP_TPA", true)
-	} else {
-		field, _ = FindFieldHeaderByName("NXM_OF_ARP_TPA", false)
-	}
+	field, _ = FindFieldHeaderByName("NXM_OF_ARP_TPA", mask != nil)
 
 	field.Value = &ArpXPaField{ArpPa: addr}
 	if mask != nil {

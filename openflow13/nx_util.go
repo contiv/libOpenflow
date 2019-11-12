@@ -142,14 +142,14 @@ var oxxFieldHeaderMap = map[string]*MatchField{
 	"NXM_NX_CT_LABEL":      newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_CT_LABEL, 16),
 	"NXM_NX_TUN_IPV6_SRC":  newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_IPV6_SRC, 16),
 	"NXM_NX_TUN_IPV6_DST":  newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_IPV6_DST, 16),
-	"NXM_NX_TUN_METADATA0": newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_METADAT0, 128),
-	"NXM_NX_TUN_METADATA1": newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_METADAT1, 128),
-	"NXM_NX_TUN_METADATA2": newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_METADAT2, 128),
-	"NXM_NX_TUN_METADATA3": newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_METADAT3, 128),
-	"NXM_NX_TUN_METADATA4": newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_METADAT4, 128),
-	"NXM_NX_TUN_METADATA5": newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_METADAT5, 128),
-	"NXM_NX_TUN_METADATA6": newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_METADAT6, 128),
-	"NXM_NX_TUN_METADATA7": newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_METADAT7, 128),
+	"NXM_NX_TUN_METADATA0": newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_METADATA0, 128),
+	"NXM_NX_TUN_METADATA1": newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_METADATA1, 128),
+	"NXM_NX_TUN_METADATA2": newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_METADATA2, 128),
+	"NXM_NX_TUN_METADATA3": newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_METADATA3, 128),
+	"NXM_NX_TUN_METADATA4": newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_METADATA4, 128),
+	"NXM_NX_TUN_METADATA5": newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_METADATA5, 128),
+	"NXM_NX_TUN_METADATA6": newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_METADATA6, 128),
+	"NXM_NX_TUN_METADATA7": newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_METADATA7, 128),
 
 	"OXM_OF_IN_PORT":        newMatchFieldHeader(OXM_CLASS_OPENFLOW_BASIC, OXM_FIELD_IN_PORT, 4),
 	"OXM_OF_IN_PHY_PORT":    newMatchFieldHeader(OXM_CLASS_OPENFLOW_BASIC, OXM_FIELD_IN_PHY_PORT, 4),
@@ -176,7 +176,7 @@ var oxxFieldHeaderMap = map[string]*MatchField{
 	"OXM_OF_ARP_SPA":        newMatchFieldHeader(OXM_CLASS_OPENFLOW_BASIC, OXM_FIELD_ARP_SPA, 4),
 	"OXM_OF_ARP_TPA":        newMatchFieldHeader(OXM_CLASS_OPENFLOW_BASIC, OXM_FIELD_ARP_TPA, 4),
 	"OXM_OF_ARP_SHA":        newMatchFieldHeader(OXM_CLASS_OPENFLOW_BASIC, OXM_FIELD_ARP_SHA, 6),
-	"OXM_OF_ARP_THA":        newMatchFieldHeader(OXM_CLASS_OPENFLOW_BASIC, OXM_FIELD_ARP_SHA, 6),
+	"OXM_OF_ARP_THA":        newMatchFieldHeader(OXM_CLASS_OPENFLOW_BASIC, OXM_FIELD_ARP_THA, 6),
 	"OXM_OF_IPV6_SRC":       newMatchFieldHeader(OXM_CLASS_OPENFLOW_BASIC, OXM_FIELD_IPV6_SRC, 16),
 	"OXM_OF_IPV6_DST":       newMatchFieldHeader(OXM_CLASS_OPENFLOW_BASIC, OXM_FIELD_IPV6_DST, 16),
 	"OXM_OF_IPV6_FLABEL":    newMatchFieldHeader(OXM_CLASS_OPENFLOW_BASIC, OXM_FIELD_IPV6_FLABEL, 4),
@@ -193,11 +193,11 @@ var oxxFieldHeaderMap = map[string]*MatchField{
 	"OXM_OF_IPV6_EXTHDR":    newMatchFieldHeader(OXM_CLASS_OPENFLOW_BASIC, OXM_FIELD_IPV6_EXTHDR, 2),
 }
 
-// oxxFieldHeaderWildMap is map to find target field header with mask using an OVS known OXX field name
-var oxxFieldHeaderWildMap map[string]*MatchField
+// oxmFieldHeaderWildMap is map to find target field header with mask using an OVS known OXM field name
+var oxmFieldHeaderWildMap map[string]*MatchField
 
 func init() {
-	oxxFieldHeaderWildMap = make(map[string]*MatchField)
+	oxmFieldHeaderWildMap = make(map[string]*MatchField)
 	for k, v := range oxxFieldHeaderMap {
 		field := &MatchField{
 			Class:   v.Class,
@@ -205,7 +205,7 @@ func init() {
 			HasMask: true,
 			Length:  v.Length * 2,
 		}
-		oxxFieldHeaderWildMap[k] = field
+		oxmFieldHeaderWildMap[k] = field
 	}
 }
 
@@ -214,7 +214,7 @@ func FindFieldHeaderByName(fieldName string, hasMask bool) (*MatchField, error) 
 	fieldKey := strings.ToUpper(fieldName)
 	var fieldsMap map[string]*MatchField
 	if hasMask {
-		fieldsMap = oxxFieldHeaderWildMap
+		fieldsMap = oxmFieldHeaderWildMap
 	} else {
 		fieldsMap = oxxFieldHeaderMap
 	}
@@ -237,12 +237,12 @@ func encodeOfsNbits(ofs uint16, nBits uint16) uint16 {
 	return ofs<<6 | (nBits - 1)
 }
 
-func encodeOfs(ofsNbits uint16) uint16 {
+func decodeOfs(ofsNbits uint16) uint16 {
 	return ofsNbits >> 6
 }
 
-func decodeNbits(ofsBnits uint16) uint16 {
-	return (ofsBnits & 0x3f) + 1
+func decodeNbits(ofsNbits uint16) uint16 {
+	return (ofsNbits & 0x3f) + 1
 }
 
 // NewNXRange creates a NXRange using start and end number.

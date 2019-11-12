@@ -55,7 +55,7 @@ func (a *ActionHeader) MarshalBinary() (data []byte, err error) {
 }
 
 func (a *ActionHeader) UnmarshalBinary(data []byte) error {
-	if len(data) != 4 {
+	if len(data) < int(a.Len()) {
 		return errors.New("The []byte the wrong size to unmarshal an " +
 			"ActionHeader message.")
 	}
