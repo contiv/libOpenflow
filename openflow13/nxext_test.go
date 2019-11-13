@@ -101,7 +101,7 @@ func TestNOfs(t *testing.T) {
 
 	encodeStartEnd := encodeOfsNbitsStartEnd(start, end)
 	encodeOfsNbits := encodeOfsNbits(ofs, nBits)
-	decodeOfs := encodeOfs(encodeOfsNbits)
+	decodeOfs := decodeOfs(encodeOfsNbits)
 	deCodeNbits := decodeNbits(encodeOfsNbits)
 
 	if encodeStartEnd != encodeOfsNbits {
@@ -280,7 +280,7 @@ func translateMessages(t *testing.T, act1, act2 Action, compare func(act1, act2 
 }
 
 func nxConjunctionEquals(o1, o2 Action, subtype uint16) bool {
-	if subtype != NXAST_CNJUNCTION {
+	if subtype != NXAST_CONJUNCTION {
 		return false
 	}
 	obj1 := o1.(*NXActionConjunction)

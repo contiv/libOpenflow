@@ -367,14 +367,14 @@ func DecodeMatchField(class uint16, field uint8, data []byte) (util.Message, err
 			val = new(Uint32Message)
 		case NXM_NX_TUN_GBP_ID:
 		case NXM_NX_TUN_GBP_FLAGS:
-		case NXM_NX_TUN_METADAT0:
-		case NXM_NX_TUN_METADAT1:
-		case NXM_NX_TUN_METADAT2:
-		case NXM_NX_TUN_METADAT3:
-		case NXM_NX_TUN_METADAT4:
-		case NXM_NX_TUN_METADAT5:
-		case NXM_NX_TUN_METADAT6:
-		case NXM_NX_TUN_METADAT7:
+		case NXM_NX_TUN_METADATA0:
+		case NXM_NX_TUN_METADATA1:
+		case NXM_NX_TUN_METADATA2:
+		case NXM_NX_TUN_METADATA3:
+		case NXM_NX_TUN_METADATA4:
+		case NXM_NX_TUN_METADATA5:
+		case NXM_NX_TUN_METADATA6:
+		case NXM_NX_TUN_METADATA7:
 		case NXM_NX_TUN_FLAGS:
 		case NXM_NX_CT_STATE:
 			val = new(Uint32Message)
@@ -515,14 +515,14 @@ const (
 	NXM_NX_CONJ_ID       = 37  /* nicira extension: conj_id, conjunction ID for conjunctive match */
 	NXM_NX_TUN_GBP_ID    = 38  /* nicira extension: tun_gbp_id, GBP policy ID */
 	NXM_NX_TUN_GBP_FLAGS = 39  /* nicira extension: tun_gbp_flags, GBP policy Flags*/
-	NXM_NX_TUN_METADAT0  = 40  /* nicira extension: tun_metadata for Geneve header variable data */
-	NXM_NX_TUN_METADAT1  = 41  /* nicira extension: tun_metadata, for Geneve header variable data */
-	NXM_NX_TUN_METADAT2  = 42  /* nicira extension: tun_metadata, for Geneve header variable data */
-	NXM_NX_TUN_METADAT3  = 43  /* nicira extension: tun_metadata for Geneve header variable data */
-	NXM_NX_TUN_METADAT4  = 44  /* nicira extension: tun_metadata, for Geneve header variable data */
-	NXM_NX_TUN_METADAT5  = 45  /* nicira extension: tun_metadata, for Geneve header variable data */
-	NXM_NX_TUN_METADAT6  = 46  /* nicira extension: tun_metadata, for Geneve header variable data */
-	NXM_NX_TUN_METADAT7  = 47  /* nicira extension: tun_metadata, for Geneve header variable data */
+	NXM_NX_TUN_METADATA0 = 40  /* nicira extension: tun_metadata for Geneve header variable data */
+	NXM_NX_TUN_METADATA1 = 41  /* nicira extension: tun_metadata, for Geneve header variable data */
+	NXM_NX_TUN_METADATA2 = 42  /* nicira extension: tun_metadata, for Geneve header variable data */
+	NXM_NX_TUN_METADATA3 = 43  /* nicira extension: tun_metadata for Geneve header variable data */
+	NXM_NX_TUN_METADATA4 = 44  /* nicira extension: tun_metadata, for Geneve header variable data */
+	NXM_NX_TUN_METADATA5 = 45  /* nicira extension: tun_metadata, for Geneve header variable data */
+	NXM_NX_TUN_METADATA6 = 46  /* nicira extension: tun_metadata, for Geneve header variable data */
+	NXM_NX_TUN_METADATA7 = 47  /* nicira extension: tun_metadata, for Geneve header variable data */
 	NXM_NX_TUN_FLAGS     = 104 /* nicira extension: tunnel Flags */
 	NXM_NX_CT_STATE      = 105 /* nicira extension: ct_state for conn_track */
 	NXM_NX_CT_ZONE       = 106 /* nicira extension: ct_zone for conn_track */
