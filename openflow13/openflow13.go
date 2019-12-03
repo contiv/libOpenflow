@@ -12,6 +12,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"net"
+	"unsafe"
 
 	"github.com/contiv/libOpenflow/common"
 	"github.com/contiv/libOpenflow/protocol"
@@ -104,8 +105,18 @@ func Parse(b []byte) (message util.Message, err error) {
 		message = new(common.Hello)
 		err = message.UnmarshalBinary(b)
 	case Type_Error:
-		message = new(ErrorMsg)
-		err = message.UnmarshalBinary(b)
+		errMsg := new(ErrorMsg)
+		err = errMsg.UnmarshalBinary(b)
+		if err != nil {
+			return
+		}
+		switch errMsg.Type {
+		case ET_EXPERIMENTER:
+			message = new(BundleError)
+			err = message.UnmarshalBinary(b)
+		default:
+			message = errMsg
+		}
 	case Type_EchoRequest:
 		message = new(common.Header)
 		err = message.UnmarshalBinary(b)
@@ -113,8 +124,21 @@ func Parse(b []byte) (message util.Message, err error) {
 		message = new(common.Header)
 		err = message.UnmarshalBinary(b)
 	case Type_Experimenter:
-		message = new(VendorHeader)
-		err = message.UnmarshalBinary(b)
+		vh := new(VendorHeader)
+		err = vh.UnmarshalBinary(b)
+		if err != nil {
+			return
+		}
+		switch vh.ExperimenterType {
+		case Type_BundleCtrl:
+			message = new(BundleControl)
+			err = message.UnmarshalBinary(b)
+		case Type_BundleAdd:
+			message = new(BundleAdd)
+			err = message.UnmarshalBinary(b)
+		default:
+			message = vh
+		}
 	case Type_FeaturesRequest:
 		message = NewFeaturesRequest()
 		err = message.UnmarshalBinary(b)
@@ -754,21 +778,26 @@ const (
 
 // ofp_vendor 1.3
 type VendorHeader struct {
-	Header common.Header /*Type OFPT_VENDOR*/
-	Vendor uint32
+	Header           common.Header /*Type OFPT_VENDOR*/
+	Vendor           uint32
+	ExperimenterType uint32
 }
 
 func (v *VendorHeader) Len() (n uint16) {
-	return v.Header.Len() + 4
+	return v.Header.Len() + uint16(unsafe.Sizeof(v.Vendor)) + uint16(unsafe.Sizeof(v.ExperimenterType))
 }
 
 func (v *VendorHeader) MarshalBinary() (data []byte, err error) {
-	data, err = v.Header.MarshalBinary()
-
-	b := make([]byte, 4)
-	binary.BigEndian.PutUint32(data[:4], v.Vendor)
-
-	data = append(data, b...)
+	v.Header.Length = v.Len()
+	data = make([]byte, v.Len())
+	b, err := v.Header.MarshalBinary()
+	n := 0
+	copy(data[n:], b)
+	n += len(b)
+	binary.BigEndian.PutUint32(data[n:], v.Vendor)
+	n += 4
+	binary.BigEndian.PutUint32(data[n:], v.ExperimenterType)
+	n += 4
 	return
 }
 
@@ -780,5 +809,8 @@ func (v *VendorHeader) UnmarshalBinary(data []byte) error {
 	v.Header.UnmarshalBinary(data)
 	n := int(v.Header.Len())
 	v.Vendor = binary.BigEndian.Uint32(data[n:])
+	n += 4
+	v.ExperimenterType = binary.BigEndian.Uint32(data[n:])
+	n += 4
 	return nil
 }
