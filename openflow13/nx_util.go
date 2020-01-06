@@ -193,37 +193,24 @@ var oxxFieldHeaderMap = map[string]*MatchField{
 	"OXM_OF_IPV6_EXTHDR":    newMatchFieldHeader(OXM_CLASS_OPENFLOW_BASIC, OXM_FIELD_IPV6_EXTHDR, 2),
 }
 
-// oxmFieldHeaderWildMap is map to find target field header with mask using an OVS known OXM field name
-var oxmFieldHeaderWildMap map[string]*MatchField
-
-func init() {
-	oxmFieldHeaderWildMap = make(map[string]*MatchField)
-	for k, v := range oxxFieldHeaderMap {
-		field := &MatchField{
-			Class:   v.Class,
-			Field:   v.Field,
-			HasMask: true,
-			Length:  v.Length * 2,
-		}
-		oxmFieldHeaderWildMap[k] = field
-	}
-}
-
 // FindFieldHeaderByName finds OXM/NXM field by name and mask.
 func FindFieldHeaderByName(fieldName string, hasMask bool) (*MatchField, error) {
 	fieldKey := strings.ToUpper(fieldName)
-	var fieldsMap map[string]*MatchField
-	if hasMask {
-		fieldsMap = oxmFieldHeaderWildMap
-	} else {
-		fieldsMap = oxxFieldHeaderMap
-	}
-	field, found := fieldsMap[fieldKey]
+	field, found := oxxFieldHeaderMap[fieldKey]
 	if !found {
 		return nil, fmt.Errorf("failed to find header by name %s", fieldName)
 	}
-
-	return field, nil
+	length := field.Length
+	if hasMask {
+		length = field.Length * 2
+	}
+	// Create a new MatchField and return it to the caller, then it could avoid race condition.
+	return &MatchField{
+		Class:   field.Class,
+		Field:   field.Field,
+		HasMask: hasMask,
+		Length:  length,
+	}, nil
 }
 
 // encodeOfsNbitsStartEnd encodes the range to a uint16 number.
