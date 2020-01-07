@@ -35,7 +35,7 @@ const (
 
 // Bundle property types
 const (
-	OFPBPT_EXPERIMENTER = 0XFFFF
+	OFPBPT_EXPERIMENTER = 0xFFFF
 )
 
 // Bundle error code.
