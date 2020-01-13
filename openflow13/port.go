@@ -31,6 +31,8 @@ func NewPhyPort() *PhyPort {
 	p := new(PhyPort)
 	p.HWAddr = make([]byte, ETH_ALEN)
 	p.Name = make([]byte, 16)
+	p.pad = make([]byte, 4)
+	p.pad2 = make([]byte, 2)
 	return p
 }
 
