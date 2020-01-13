@@ -3,8 +3,8 @@ package openflow13
 import (
 	"encoding/binary"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/contiv/libOpenflow/common"
+	log "github.com/sirupsen/logrus"
 )
 
 // ofp_flow_mod     1.3
