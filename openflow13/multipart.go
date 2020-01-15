@@ -3,7 +3,7 @@ package openflow13
 import (
 	"encoding/binary"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/contiv/libOpenflow/common"
 	"github.com/contiv/libOpenflow/util"
