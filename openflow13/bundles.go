@@ -40,22 +40,22 @@ const (
 
 // Bundle error code.
 const (
-	BFC_UNKNOWN           uint16 = 2300 /* Unspecified error. */
-	BFC_ERERM             uint16 = 2301 /* Permissions error. */
-	BFC_BAD_ID            uint16 = 2302 /* Bundle ID doesn't exist. */
-	BFC_BUNDLE_EXIST      uint16 = 2303 /* Bundle ID already exist. */
-	BFC_BUNDLE_CLOSED     uint16 = 2304 /* Bundle ID is closed. */
-	BFC_OUT_OF_BUNDLE     uint16 = 2305 /* Too many bundle IDs. */
-	BFC_BAD_TYPE          uint16 = 2306 /* Unsupported or unknown message control type. */
-	BFC_BAD_FLAGS         uint16 = 2307 /* Unsupported, unknown or inconsistent flags. */
-	BFC_MSG_BAD_LEN       uint16 = 2308 /* Length problem in included message. */
-	BFC_MSG_BAD_XID       uint16 = 2309 /* Inconsistent or duplicate XID. */
-	BFC_MSG_UNSUP         uint16 = 2310 /* Unsupported message in this bundle. */
-	BFC_MSG_CONFLICT      uint16 = 2311 /* Unsupported message combination in this bundle. */
-	BFC_MSG_TOO_MANY      uint16 = 2312 /* Can't handle this many messages in bundle. */
-	BFC_MSG_FAILD         uint16 = 2313 /* One message in bundle failed. */
-	BFC_TIMEOUT           uint16 = 2314 /* Bundle is taking too long. */
-	BFC_BUNDLE_IN_PROCESS uint16 = 2315 /* Bundle is locking the resource. */
+	BEC_UNKNOWN           uint16 = 2300 /* Unspecified error. */
+	BEC_ERERM             uint16 = 2301 /* Permissions error. */
+	BEC_BAD_ID            uint16 = 2302 /* Bundle ID doesn't exist. */
+	BEC_BUNDLE_EXIST      uint16 = 2303 /* Bundle ID already exist. */
+	BEC_BUNDLE_CLOSED     uint16 = 2304 /* Bundle ID is closed. */
+	BEC_OUT_OF_BUNDLE     uint16 = 2305 /* Too many bundle IDs. */
+	BEC_BAD_TYPE          uint16 = 2306 /* Unsupported or unknown message control type. */
+	BEC_BAD_FLAGS         uint16 = 2307 /* Unsupported, unknown or inconsistent flags. */
+	BEC_MSG_BAD_LEN       uint16 = 2308 /* Length problem in included message. */
+	BEC_MSG_BAD_XID       uint16 = 2309 /* Inconsistent or duplicate XID. */
+	BEC_MSG_UNSUP         uint16 = 2310 /* Unsupported message in this bundle. */
+	BEC_MSG_CONFLICT      uint16 = 2311 /* Unsupported message combination in this bundle. */
+	BEC_MSG_TOO_MANY      uint16 = 2312 /* Can't handle this many messages in bundle. */
+	BEC_MSG_FAILD         uint16 = 2313 /* One message in bundle failed. */
+	BEC_TIMEOUT           uint16 = 2314 /* Bundle is taking too long. */
+	BEC_BUNDLE_IN_PROCESS uint16 = 2315 /* Bundle is locking the resource. */
 )
 
 // BundleControl is a message to control the bundle.
@@ -351,37 +351,37 @@ func NewBundleError() *BundleError {
 // ParseBundleError returns error according to bundle error code.
 func ParseBundleError(errCode uint16) error {
 	switch errCode {
-	case BFC_UNKNOWN:
+	case BEC_UNKNOWN:
 		return errors.New("unknown bundle error")
-	case BFC_ERERM:
+	case BEC_ERERM:
 		return errors.New("permissions error")
-	case BFC_BAD_ID:
+	case BEC_BAD_ID:
 		return errors.New("bundle ID doesn't exist")
-	case BFC_BUNDLE_EXIST:
+	case BEC_BUNDLE_EXIST:
 		return errors.New("bundle ID already exists")
-	case BFC_BUNDLE_CLOSED:
+	case BEC_BUNDLE_CLOSED:
 		return errors.New("bundle ID is closed")
-	case BFC_OUT_OF_BUNDLE:
+	case BEC_OUT_OF_BUNDLE:
 		return errors.New("too many bundle IDs")
-	case BFC_BAD_TYPE:
+	case BEC_BAD_TYPE:
 		return errors.New("unsupported or unknown message control type")
-	case BFC_BAD_FLAGS:
+	case BEC_BAD_FLAGS:
 		return errors.New("unsupported, unknown or inconsistent flags")
-	case BFC_MSG_BAD_LEN:
+	case BEC_MSG_BAD_LEN:
 		return errors.New("length problem in included message")
-	case BFC_MSG_BAD_XID:
+	case BEC_MSG_BAD_XID:
 		return errors.New("inconsistent or duplicate XID")
-	case BFC_MSG_UNSUP:
+	case BEC_MSG_UNSUP:
 		return errors.New("unsupported message in this bundle")
-	case BFC_MSG_CONFLICT:
+	case BEC_MSG_CONFLICT:
 		return errors.New("unsupported message combination in this bundle")
-	case BFC_MSG_TOO_MANY:
+	case BEC_MSG_TOO_MANY:
 		return errors.New("can't handle this many messages in bundle")
-	case BFC_MSG_FAILD:
+	case BEC_MSG_FAILD:
 		return errors.New("one message in bundle failed")
-	case BFC_TIMEOUT:
+	case BEC_TIMEOUT:
 		return errors.New("bundle is taking too long")
-	case BFC_BUNDLE_IN_PROCESS:
+	case BEC_BUNDLE_IN_PROCESS:
 		return errors.New("bundle is locking the resource")
 	}
 	return nil
