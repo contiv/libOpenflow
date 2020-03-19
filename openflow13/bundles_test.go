@@ -51,7 +51,7 @@ func TestBundleAdd(t *testing.T) {
 
 func TestBundleError(t *testing.T) {
 	bundleError := NewBundleError()
-	bundleError.Code = BFC_TIMEOUT
+	bundleError.Code = BEC_TIMEOUT
 	data, err := bundleError.MarshalBinary()
 	if err != nil {
 		t.Fatalf("Failed to Marshal BundleError message: %v", err)

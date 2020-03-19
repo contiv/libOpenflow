@@ -126,6 +126,7 @@ func DecodeNxAction(data []byte) Action {
 	case NXAST_REG_LOAD:
 		a = new(NXActionRegLoad)
 	case NXAST_NOTE:
+		a = new(NXActionNote)
 	case NXAST_SET_TUNNEL_V6:
 	case NXAST_MULTIPATH:
 	case NXAST_AUTOPATH:
@@ -136,6 +137,7 @@ func DecodeNxAction(data []byte) Action {
 	case NXAST_OUTPUT_REG:
 		a = new(NXActionOutputReg)
 	case NXAST_LEARN:
+		a = new(NXActionLearn)
 	case NXAST_EXIT:
 	case NXAST_DEC_TTL:
 		a = new(NXActionDecTTL)
@@ -471,8 +473,8 @@ func (a *NXActionRegMove) UnmarshalBinary(data []byte) error {
 	a.NXActionHeader = new(NXActionHeader)
 	err := a.NXActionHeader.UnmarshalBinary(data[n:])
 	n += int(a.NXActionHeader.Len())
-	if len(data) < int(a.Len()) {
-		return errors.New("the []byte is too short to unmarshal a full NXActionRegLoad message")
+	if len(data) < int(a.Length) {
+		return errors.New("the []byte is too short to unmarshal a full NXActionRegMove message")
 	}
 	a.Nbits = binary.BigEndian.Uint16(data[n:])
 	n += 2
@@ -1002,4 +1004,342 @@ func NewNXActionDecTTLCntIDs(controllers uint16, ids ...uint16) *NXActionDecTTLC
 	}
 	a.Length = 16 + uint16(2*len(ids))
 	return a
+}
+
+type NXLearnSpecHeader struct {
+	src    bool
+	dst    bool
+	output bool
+	nBits  uint16
+	length uint16
+}
+
+func (h *NXLearnSpecHeader) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, h.length)
+	value := h.nBits
+	if h.src {
+		value |= 1 << LEARN_SPEC_HEADER_MATCH
+	} else {
+		value &^= 1 << LEARN_SPEC_HEADER_MATCH
+	}
+	if h.dst {
+		value |= 1 << LEARN_SPEC_HEADER_LOAD
+	} else {
+		value &^= 1 << LEARN_SPEC_HEADER_LOAD
+	}
+	if h.output {
+		value &^= 1 << LEARN_SPEC_HEADER_MATCH
+		value |= 2 << LEARN_SPEC_HEADER_LOAD
+	}
+	binary.BigEndian.PutUint16(data[0:], value)
+	return
+}
+
+func (h *NXLearnSpecHeader) UnmarshalBinary(data []byte) error {
+	if len(data) < 2 {
+		return errors.New("the []byte is too short to unmarshal a full NXLearnSpecHeader message")
+	}
+	value := binary.BigEndian.Uint16(data)
+	h.length = 2
+	h.nBits = (0xffff >> 5) & value
+	h.src = ((1 << LEARN_SPEC_HEADER_MATCH) & value) != 0
+	h.dst = ((1 << LEARN_SPEC_HEADER_LOAD) & value) != 0
+	h.output = ((2 << LEARN_SPEC_HEADER_LOAD) & value) != 0
+	return nil
+}
+
+func (h *NXLearnSpecHeader) Len() (n uint16) {
+	return h.length
+}
+
+func NewLearnHeaderMatchFromValue(nBits uint16) *NXLearnSpecHeader {
+	return &NXLearnSpecHeader{src: true, dst: false, nBits: nBits, length: 2}
+}
+
+func NewLearnHeaderMatchFromField(nBits uint16) *NXLearnSpecHeader {
+	return &NXLearnSpecHeader{src: false, dst: false, nBits: nBits, length: 2}
+}
+
+func NewLearnHeaderLoadFromValue(nBits uint16) *NXLearnSpecHeader {
+	return &NXLearnSpecHeader{src: true, dst: true, nBits: nBits, length: 2}
+}
+
+func NewLearnHeaderLoadFromField(nBits uint16) *NXLearnSpecHeader {
+	return &NXLearnSpecHeader{src: false, dst: true, nBits: nBits, length: 2}
+}
+
+func NewLearnHeaderOutputFromField(nBits uint16) *NXLearnSpecHeader {
+	return &NXLearnSpecHeader{src: false, dst: false, output: true, nBits: nBits, length: 2}
+}
+
+type NXLearnSpecField struct {
+	Field *MatchField
+	Ofs   uint16
+}
+
+func (f *NXLearnSpecField) Len() uint16 {
+	return uint16(6)
+}
+
+func (f *NXLearnSpecField) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, f.Len())
+	n := 0
+	fieldValue := f.Field.MarshalHeader()
+	binary.BigEndian.PutUint32(data[n:], fieldValue)
+	n += 4
+	binary.BigEndian.PutUint16(data[n:], f.Ofs)
+	return
+}
+
+func (f *NXLearnSpecField) UnmarshalBinary(data []byte) error {
+	if len(data) < int(f.Len()) {
+		return errors.New("the []byte is too short to unmarshal a full NXLearnSpecField message")
+	}
+	f.Field = new(MatchField)
+	n := 0
+	err := f.Field.UnmarshalHeader(data[n:])
+	if err != nil {
+		return err
+	}
+	n += 4
+	f.Ofs = binary.BigEndian.Uint16(data[n:])
+	return nil
+}
+
+type NXLearnSpec struct {
+	Header   *NXLearnSpecHeader
+	SrcField *NXLearnSpecField
+	DstField *NXLearnSpecField
+	SrcValue []byte
+}
+
+func (s *NXLearnSpec) Len() uint16 {
+	length := s.Header.Len()
+	if s.Header.src {
+		length += 2 * ((s.Header.nBits + 15) / 16)
+	} else {
+		length += 6
+	}
+
+	// Add the length of DstField if it is not to "output" to a port.
+	if !s.Header.output {
+		length += 6
+	}
+	return length
+}
+
+func (s *NXLearnSpec) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, s.Len())
+	n := 0
+	b, err := s.Header.MarshalBinary()
+	if err != nil {
+		return data, err
+	}
+	copy(data[n:], b)
+	n += len(b)
+	var srcData []byte
+	var srcDataLength int
+	if s.Header.src {
+		srcDataLength = int(2 * ((s.Header.nBits + 15) / 16))
+		srcData = append(srcData, s.SrcValue[:srcDataLength]...)
+	} else {
+		srcData, err = s.SrcField.MarshalBinary()
+		if err != nil {
+			return data, err
+		}
+		srcDataLength = 6
+	}
+	copy(data[n:], srcData)
+	n += srcDataLength
+	if !s.Header.output {
+		var dstData []byte
+		dstData, err = s.DstField.MarshalBinary()
+		if err != nil {
+			return data, err
+		}
+		copy(data[n:], dstData)
+	}
+	return data, err
+}
+
+func (s *NXLearnSpec) UnmarshalBinary(data []byte) error {
+	var err error
+	s.Header = new(NXLearnSpecHeader)
+	err = s.Header.UnmarshalBinary(data)
+	if err != nil {
+		return err
+	}
+	n := s.Header.Len()
+	if s.Header.src {
+		srcDataLength := 2 * ((s.Header.nBits + 15) / 16)
+		s.SrcValue = data[n : n+srcDataLength]
+		n += srcDataLength
+	} else {
+		s.SrcField = new(NXLearnSpecField)
+		err = s.SrcField.UnmarshalBinary(data[n:])
+		if err != nil {
+			return err
+		}
+		n += s.SrcField.Len()
+	}
+	if !s.Header.output {
+		s.DstField = new(NXLearnSpecField)
+		err = s.DstField.UnmarshalBinary(data[n:])
+		if err != nil {
+			return err
+		}
+		n += s.DstField.Len()
+	}
+
+	return err
+}
+
+type NXActionLearn struct {
+	*NXActionHeader
+	IdleTimeout    uint16
+	HardTimeout    uint16
+	Priority       uint16
+	Cookie         uint64
+	Flags          uint16
+	TableID        uint8
+	pad            uint8
+	FinIdleTimeout uint16
+	FinHardTimeout uint16
+	LearnSpecs     []*NXLearnSpec
+	pad2           []byte
+}
+
+func (a *NXActionLearn) Len() uint16 {
+	length := a.NXActionHeader.Len() + 22
+	for _, s := range a.LearnSpecs {
+		length += s.Len()
+	}
+	return 8 * ((length + 7) / 8)
+}
+
+func (a *NXActionLearn) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, a.Len())
+	var b []byte
+	n := 0
+	a.Length = a.Len()
+	b, err = a.NXActionHeader.MarshalBinary()
+	copy(data[n:], b)
+	n += len(b)
+	binary.BigEndian.PutUint16(data[n:], a.IdleTimeout)
+	n += 2
+	binary.BigEndian.PutUint16(data[n:], a.HardTimeout)
+	n += 2
+	binary.BigEndian.PutUint16(data[n:], a.Priority)
+	n += 2
+	binary.BigEndian.PutUint64(data[n:], a.Cookie)
+	n += 8
+	binary.BigEndian.PutUint16(data[n:], a.Flags)
+	n += 2
+	data[n] = a.TableID
+	n += 2
+	binary.BigEndian.PutUint16(data[n:], a.FinIdleTimeout)
+	n += 2
+	binary.BigEndian.PutUint16(data[n:], a.FinHardTimeout)
+	n += 2
+	for _, s := range a.LearnSpecs {
+		b, err = s.MarshalBinary()
+		if err != nil {
+			return data, err
+		}
+		copy(data[n:], b)
+		n += len(b)
+	}
+	return
+}
+
+func (a *NXActionLearn) UnmarshalBinary(data []byte) error {
+	n := 0
+	a.NXActionHeader = new(NXActionHeader)
+	err := a.NXActionHeader.UnmarshalBinary(data[n:])
+	if err != nil {
+		return err
+	}
+	if len(data) < int(a.Length) {
+		return errors.New("the []byte is too short to unmarshal a full NXActionLearn message")
+	}
+	n += int(a.NXActionHeader.Len())
+	a.IdleTimeout = binary.BigEndian.Uint16(data[n:])
+	n += 2
+	a.HardTimeout = binary.BigEndian.Uint16(data[n:])
+	n += 2
+	a.Priority = binary.BigEndian.Uint16(data[n:])
+	n += 2
+	a.Cookie = binary.BigEndian.Uint64(data[n:])
+	n += 8
+	a.Flags = binary.BigEndian.Uint16(data[n:])
+	n += 2
+	a.TableID = data[n]
+	n += 2
+	a.FinIdleTimeout = binary.BigEndian.Uint16(data[n:])
+	n += 2
+	a.FinHardTimeout = binary.BigEndian.Uint16(data[n:])
+	n += 2
+	for n < int(a.Length) {
+		if int(a.Length)-n < 8 {
+			break
+		}
+		spec := new(NXLearnSpec)
+		err = spec.UnmarshalBinary(data[n:])
+		if err != nil {
+			return err
+		}
+		a.LearnSpecs = append(a.LearnSpecs, spec)
+		n += int(spec.Len())
+	}
+	return nil
+}
+
+func NewNXActionLearn() *NXActionLearn {
+	return &NXActionLearn{
+		NXActionHeader: NewNxActionHeader(NXAST_LEARN),
+	}
+}
+
+type NXActionNote struct {
+	*NXActionHeader
+	Note []byte
+}
+
+func (a *NXActionNote) Len() uint16 {
+	length := a.NXActionHeader.Len() + uint16(len(a.Note))
+	return 8 * ((length + 7) / 8)
+}
+
+func (a *NXActionNote) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, a.Len())
+	n := 0
+	a.Length = a.Len()
+	b, err := a.NXActionHeader.MarshalBinary()
+	if err != nil {
+		return data, err
+	}
+	copy(data[n:], b)
+	n += len(b)
+	copy(data[n:], a.Note)
+	return
+}
+
+func (a *NXActionNote) UnmarshalBinary(data []byte) error {
+	a.NXActionHeader = new(NXActionHeader)
+	err := a.NXActionHeader.UnmarshalBinary(data)
+	if err != nil {
+		return err
+	}
+	if len(data) < int(a.Length) {
+		return errors.New("the []byte is too short to unmarshal a full NXActionNote message")
+	}
+	n := a.NXActionHeader.Len()
+	a.Note = data[n:]
+	return nil
+}
+
+func NewNXActionNote() *NXActionNote {
+	return &NXActionNote{
+		NXActionHeader: NewNxActionHeader(NXAST_NOTE),
+	}
 }

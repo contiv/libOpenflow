@@ -1,8 +1,10 @@
 package openflow13
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net"
 	"testing"
@@ -255,6 +257,227 @@ func TestNXActions(t *testing.T) {
 	translateMessages(t, NewNXActionDecTTL(), new(NXActionDecTTL), nxDecTTLEquals)
 	translateMessages(t, NewNXActionDecTTLCntIDs(2, uint16(1), uint16(2)), new(NXActionDecTTLCntIDs), nxDecTTLCntIDsEquals)
 
+}
+
+func TestNXActionNote(t *testing.T) {
+	note := []byte("test-notes")
+	oriAction := &NXActionNote{
+		NXActionHeader: NewNxActionHeader(NXAST_NOTE),
+		Note:           note,
+	}
+	data, err := oriAction.MarshalBinary()
+	if err != nil {
+		t.Fatalf("Failed to Marshal message: %v", err)
+	}
+	newAction := &NXActionNote{}
+	err = newAction.UnmarshalBinary(data)
+	if err != nil {
+		t.Fatalf("Failed to UnMarshal message: %v", err)
+	}
+	oriNoteLength := len(oriAction.Note)
+	newNoteLength := len(newAction.Note)
+	if newNoteLength < oriNoteLength {
+		t.Errorf("Failed to read all note data")
+	}
+	if !bytes.Equal(oriAction.Note, newAction.Note[:oriNoteLength]) {
+		t.Errorf("note not equal")
+	}
+}
+
+func TestNXLearnSpecHeader(t *testing.T) {
+	testFunc := func(oriHeader *NXLearnSpecHeader) {
+		data, err := oriHeader.MarshalBinary()
+		if err != nil {
+			t.Fatalf("Failed to Marshal message: %v", err)
+		}
+		newHeader := &NXLearnSpecHeader{}
+		err = newHeader.UnmarshalBinary(data)
+		if err != nil {
+			t.Fatalf("Failed to UnMarshal message: %v", err)
+		}
+		if err = nxLearnSpecHeaderEquals(oriHeader, newHeader); err != nil {
+			t.Error(err)
+		}
+	}
+	nBits := uint16(48)
+	for _, f := range []func(n uint16) *NXLearnSpecHeader{
+		NewLearnHeaderMatchFromValue,
+		NewLearnHeaderMatchFromField,
+		NewLearnHeaderLoadFromValue,
+		NewLearnHeaderLoadFromField,
+		NewLearnHeaderOutputFromField,
+	} {
+		testFunc(f(nBits))
+	}
+}
+
+func TestNXLearnSpec(t *testing.T) {
+	testFunc := func(oriSpec *NXLearnSpec) {
+		data, err := oriSpec.MarshalBinary()
+		if err != nil {
+			t.Fatalf("Failed to Marshal message: %v", err)
+		}
+		newSpec := new(NXLearnSpec)
+		err = newSpec.UnmarshalBinary(data)
+		if err != nil {
+			t.Fatalf("Failed to UnMarshal message: %v", err)
+		}
+		if err = nxLearnSpecEquals(oriSpec, newSpec); err != nil {
+			t.Error(err)
+		}
+	}
+
+	for _, spec := range prepareLearnSpeces() {
+		testFunc(spec)
+	}
+}
+
+func TestNXActionLearn(t *testing.T) {
+	testFunc := func(oriAction *NXActionLearn) {
+		data, err := oriAction.MarshalBinary()
+		if err != nil {
+			t.Fatalf("Failed to Marshal message: %v", err)
+		}
+		newAction := new(NXActionLearn)
+		err = newAction.UnmarshalBinary(data)
+		if err != nil {
+			t.Fatalf("Failed to UnMarshal message: %v", err)
+		}
+		if err = nsLearnEquals(oriAction, newAction); err != nil {
+			t.Error(err)
+		}
+	}
+
+	action := &NXActionLearn{
+		NXActionHeader: NewNxActionHeader(NXAST_LEARN),
+		IdleTimeout:    10,
+		HardTimeout:    20,
+		Priority:       80,
+		Cookie:         0x123456789abcdef0,
+		TableID:        2,
+		FinIdleTimeout: 2,
+		FinHardTimeout: 4,
+		LearnSpecs:     prepareLearnSpeces(),
+	}
+	testFunc(action)
+}
+
+func prepareLearnSpeces() []*NXLearnSpec {
+	srcValue1 := make([]byte, 2)
+	binary.BigEndian.PutUint16(srcValue1, 99)
+	dstField1, _ := FindFieldHeaderByName("NXM_OF_IN_PORT", false)
+	dstSpecField1 := &NXLearnSpecField{dstField1, 0}
+	srcField2, _ := FindFieldHeaderByName("NXM_OF_ETH_SRC", false)
+	srcSpecField2 := &NXLearnSpecField{srcField2, 0}
+	dstField2, _ := FindFieldHeaderByName("NXM_OF_ETH_DST", false)
+	dstSpecField2 := &NXLearnSpecField{dstField2, 0}
+	srcField3, _ := FindFieldHeaderByName("NXM_OF_IN_PORT", false)
+	srcSpecField3 := &NXLearnSpecField{srcField3, 0}
+	dstField3, _ := FindFieldHeaderByName("NXM_NX_REG1", false)
+	dstSpecField3 := &NXLearnSpecField{dstField3, 16}
+	srcValue4, _ := hex.DecodeString("aabbccddeeff")
+	dstField4, _ := FindFieldHeaderByName("NXM_OF_ETH_SRC", false)
+	dstSpecField4 := &NXLearnSpecField{dstField4, 0}
+	srcField5, _ := FindFieldHeaderByName("NXM_OF_IN_PORT", false)
+	srcSpecField5 := &NXLearnSpecField{srcField5, 0}
+	return []*NXLearnSpec{
+		{Header: NewLearnHeaderMatchFromValue(16), SrcValue: srcValue1, DstField: dstSpecField1},
+		{Header: NewLearnHeaderMatchFromField(48), SrcField: srcSpecField2, DstField: dstSpecField2},
+		{Header: NewLearnHeaderLoadFromField(16), SrcField: srcSpecField3, DstField: dstSpecField3},
+		{Header: NewLearnHeaderLoadFromValue(48), SrcValue: srcValue4, DstField: dstSpecField4},
+		{Header: NewLearnHeaderOutputFromField(16), SrcField: srcSpecField5},
+	}
+}
+
+func nsLearnEquals(oriAction, newAction *NXActionLearn) error {
+	if oriAction.IdleTimeout != newAction.IdleTimeout {
+		return errors.New("learn idleTimeout not equal")
+	}
+	if oriAction.HardTimeout != newAction.HardTimeout {
+		return errors.New("learn hardTimeout not equal")
+	}
+	if oriAction.Priority != newAction.Priority {
+		return errors.New("learn priority not equal")
+	}
+	if oriAction.Flags != newAction.Flags {
+		return errors.New("learn cookie not equal")
+	}
+	if oriAction.Cookie != newAction.Cookie {
+		return errors.New("learn cookie not equal")
+	}
+	if oriAction.TableID != newAction.TableID {
+		return errors.New("learn table not equal")
+	}
+	if oriAction.FinIdleTimeout != newAction.FinIdleTimeout {
+		return errors.New("learn finIdleTimeout not equal")
+	}
+	if oriAction.FinHardTimeout != newAction.FinHardTimeout {
+		return errors.New("learn finHardTimeout not equal")
+	}
+	if len(oriAction.LearnSpecs) != len(newAction.LearnSpecs) {
+		return errors.New("learn spec count not equal")
+	}
+	for idx := range oriAction.LearnSpecs {
+		oriSpec := oriAction.LearnSpecs[idx]
+		newSpec := newAction.LearnSpecs[idx]
+		if err := nxLearnSpecEquals(oriSpec, newSpec); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func nxLearnSpecEquals(oriSpec, newSpec *NXLearnSpec) error {
+	if err := nxLearnSpecHeaderEquals(oriSpec.Header, newSpec.Header); err != nil {
+		return err
+	}
+	if err := nxLearnSpecFieldEquals(oriSpec.SrcField, newSpec.SrcField); err != nil {
+		return err
+	}
+	if err := nxLearnSpecFieldEquals(oriSpec.DstField, newSpec.DstField); err != nil {
+		return err
+	}
+	if !bytes.Equal(oriSpec.SrcValue, newSpec.SrcValue) {
+		errors.New("spec src value not equal")
+	}
+	return nil
+}
+
+func nxLearnSpecFieldEquals(oriField, newField *NXLearnSpecField) error {
+	if (oriField != nil && newField == nil) || (oriField == nil && newField != nil) {
+		return errors.New("spec field not equal")
+	}
+	if oriField != nil && newField != nil {
+		if oriField.Ofs != newField.Ofs {
+			return errors.New("spec ofs not equal")
+		}
+		oriFieldHeader := oriField.Field.MarshalHeader()
+		newFieldHeader := newField.Field.MarshalHeader()
+		if oriFieldHeader != newFieldHeader {
+			return errors.New("spec field header not equal")
+		}
+	}
+	return nil
+}
+
+func nxLearnSpecHeaderEquals(oriHeader, newHeader *NXLearnSpecHeader) error {
+	if oriHeader.length != newHeader.length {
+		return errors.New("header length not equal")
+	}
+	if oriHeader.src != newHeader.src {
+		return errors.New("header src not equal")
+	}
+	if oriHeader.dst != newHeader.dst {
+		return errors.New("header dst not equal")
+	}
+	if oriHeader.nBits != newHeader.nBits {
+		return errors.New("header nBits not equal")
+	}
+	if oriHeader.output != newHeader.output {
+		return errors.New("header output not equal")
+	}
+	return nil
 }
 
 func translateMessages(t *testing.T, act1, act2 Action, compare func(act1, act2 Action, stype uint16) bool) {

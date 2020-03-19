@@ -49,7 +49,20 @@ const (
 	NX_NAT_F_MASK         = (NX_NAT_F_SRC | NX_NAT_F_DST | NX_NAT_F_PERSISTENT | NX_NAT_F_PROTO_HASH | NX_NAT_F_PROTO_RANDOM)
 )
 
-// NXM_OF fields. The class number of thses fields are 0x0000.
+// NX_LEARN flags
+const (
+	NX_LEARN_F_SEND_FLOW_REM  = 1 << 0
+	NX_LEARN_F_DELETE_LEARNED = 1 << 1
+	NX_LEARN_F_WRITE_RESULT   = 1 << 2
+)
+
+// NX_LEARN field offset
+const (
+	LEARN_SPEC_HEADER_LOAD  = 11
+	LEARN_SPEC_HEADER_MATCH = 13
+)
+
+// NXM_OF fields. The class number of these fields are 0x0000.
 const (
 	NXM_OF_IN_PORT uint8 = iota
 	NXM_OF_ETH_DST
