@@ -400,6 +400,8 @@ func DecodeMatchField(class uint16, field uint8, data []byte) (util.Message, err
 		switch field {
 		case OXM_FIELD_TCP_FLAGS:
 			val = new(TcpFlagsField)
+		case OXM_FIELD_ACTSET_OUTPUT:
+			val = new(ActsetOutputField)
 		}
 		err := val.UnmarshalBinary(data)
 		if err != nil {
@@ -472,6 +474,7 @@ const (
 	OXM_FIELD_IPV6_EXTHDR    = 39 /* IPv6 Extension Header pseudo-field */
 	OXM_FIELD_PBB_UCA        = 41 /* PBB UCA header field (from OpenFlow 1.4) */
 	OXM_FIELD_TCP_FLAGS      = 42 /* TCP flags (from OpenFlow 1.5) */
+	OXM_FIELD_ACTSET_OUTPUT  = 43 /* actset output port number (from OpenFlow 1.5) */
 )
 
 const (
@@ -1482,5 +1485,40 @@ func NewArpSpaField(arpSpa net.IP) *MatchField {
 	arpXPAField.ArpPa = arpSpa
 	f.Value = arpXPAField
 	f.Length = uint8(arpXPAField.Len())
+	return f
+}
+
+
+// ACTSET_OUTPUT field
+type ActsetOutputField struct {
+	OutputPort uint32
+}
+
+func (m *ActsetOutputField) Len() uint16 {
+	return 4
+}
+func (m *ActsetOutputField) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, 4)
+
+	binary.BigEndian.PutUint32(data, m.OutputPort)
+	return
+}
+func (m *ActsetOutputField) UnmarshalBinary(data []byte) error {
+	m.OutputPort = binary.BigEndian.Uint32(data)
+	return nil
+}
+
+// Return a MatchField for actset_output port matching
+func NewActsetOutputField(actsetOutputPort uint32) *MatchField {
+	f := new(MatchField)
+	f.Class = OXM_CLASS_OPENFLOW_BASIC
+	f.Field = OXM_FIELD_ACTSET_OUTPUT
+	f.HasMask = false
+
+	actsetOutputField := new(ActsetOutputField)
+	actsetOutputField.OutputPort = actsetOutputPort
+	f.Value = actsetOutputField
+	f.Length = uint8(actsetOutputField.Len())
+
 	return f
 }
