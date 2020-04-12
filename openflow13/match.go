@@ -175,13 +175,13 @@ func (m *MatchField) UnmarshalBinary(data []byte) error {
 		}
 	}
 
-	if m.Value, err = DecodeMatchField(m.Class, m.Field, data[n:]); err != nil {
+	if m.Value, err = DecodeMatchField(m.Class, m.Field, m.Length, m.HasMask, data[n:]); err != nil {
 		return err
 	}
 	n += m.Value.Len()
 
 	if m.HasMask {
-		if m.Mask, err = DecodeMatchField(m.Class, m.Field, data[n:]); err != nil {
+		if m.Mask, err = DecodeMatchField(m.Class, m.Field, m.Length, m.HasMask, data[n:]); err != nil {
 			return err
 		}
 		n += m.Mask.Len()
@@ -216,7 +216,7 @@ func (m *MatchField) UnmarshalHeader(data []byte) error {
 	return err
 }
 
-func DecodeMatchField(class uint16, field uint8, data []byte) (util.Message, error) {
+func DecodeMatchField(class uint16, field uint8, length uint8, hasMask bool, data []byte) (util.Message, error) {
 	if class == OXM_CLASS_OPENFLOW_BASIC {
 		var val util.Message
 		val = nil
@@ -368,13 +368,27 @@ func DecodeMatchField(class uint16, field uint8, data []byte) (util.Message, err
 		case NXM_NX_TUN_GBP_ID:
 		case NXM_NX_TUN_GBP_FLAGS:
 		case NXM_NX_TUN_METADATA0:
+			fallthrough
 		case NXM_NX_TUN_METADATA1:
+			fallthrough
 		case NXM_NX_TUN_METADATA2:
+			fallthrough
 		case NXM_NX_TUN_METADATA3:
+			fallthrough
 		case NXM_NX_TUN_METADATA4:
+			fallthrough
 		case NXM_NX_TUN_METADATA5:
+			fallthrough
 		case NXM_NX_TUN_METADATA6:
+			fallthrough
 		case NXM_NX_TUN_METADATA7:
+			msg := new(ByteArrayField)
+			if !hasMask {
+				msg.length = length
+			} else {
+				msg.length = length / 2
+			}
+			val = msg
 		case NXM_NX_TUN_FLAGS:
 		case NXM_NX_CT_STATE:
 			val = new(Uint32Message)
@@ -385,6 +399,16 @@ func DecodeMatchField(class uint16, field uint8, data []byte) (util.Message, err
 		case NXM_NX_CT_LABEL:
 			val = new(CTLabel)
 		case NXM_NX_TUN_IPV6_SRC:
+		case NXM_NX_CT_NW_PROTO:
+			val = new(IpProtoField)
+		case NXM_NX_CT_NW_SRC:
+			val = new(Ipv4SrcField)
+		case NXM_NX_CT_NW_DST:
+			val = new(Ipv4DstField)
+		case NXM_NX_CT_TP_DST:
+			val = new(PortField)
+		case NXM_NX_CT_TP_SRC:
+			val = new(PortField)
 		default:
 			log.Printf("Unhandled Field: %d in Class: %d", field, class)
 			return nil, fmt.Errorf("Bad pkt class: %v field: %v data: %v", class, field, data)
@@ -515,10 +539,10 @@ const (
 	NXM_NX_CONJ_ID       = 37  /* nicira extension: conj_id, conjunction ID for conjunctive match */
 	NXM_NX_TUN_GBP_ID    = 38  /* nicira extension: tun_gbp_id, GBP policy ID */
 	NXM_NX_TUN_GBP_FLAGS = 39  /* nicira extension: tun_gbp_flags, GBP policy Flags*/
-	NXM_NX_TUN_METADATA0 = 40  /* nicira extension: tun_metadata for Geneve header variable data */
+	NXM_NX_TUN_METADATA0 = 40  /* nicira extension: tun_metadata, for Geneve header variable data */
 	NXM_NX_TUN_METADATA1 = 41  /* nicira extension: tun_metadata, for Geneve header variable data */
 	NXM_NX_TUN_METADATA2 = 42  /* nicira extension: tun_metadata, for Geneve header variable data */
-	NXM_NX_TUN_METADATA3 = 43  /* nicira extension: tun_metadata for Geneve header variable data */
+	NXM_NX_TUN_METADATA3 = 43  /* nicira extension: tun_metadata, for Geneve header variable data */
 	NXM_NX_TUN_METADATA4 = 44  /* nicira extension: tun_metadata, for Geneve header variable data */
 	NXM_NX_TUN_METADATA5 = 45  /* nicira extension: tun_metadata, for Geneve header variable data */
 	NXM_NX_TUN_METADATA6 = 46  /* nicira extension: tun_metadata, for Geneve header variable data */
@@ -530,6 +554,13 @@ const (
 	NXM_NX_CT_LABEL      = 108 /* nicira extension: ct_label for conn_track */
 	NXM_NX_TUN_IPV6_SRC  = 109 /* nicira extension: tun_dst_ipv6, dst IPv6 address of tunnel */
 	NXM_NX_TUN_IPV6_DST  = 110 /* nicira extension: tun_dst_ipv6, src IPv6 address of tunnel */
+	NXM_NX_CT_NW_PROTO   = 119 /* nicira extension: ct_nw_proto, the protocol byte in the IPv4 or IPv6 header forthe original direction tuple of the conntrack entry */
+	NXM_NX_CT_NW_SRC     = 120 /* nicira extension: ct_nw_src, source IPv4 address of the original direction tuple of the conntrack entry */
+	NXM_NX_CT_NW_DST     = 121 /* nicira extension: ct_nw_dst, destination IPv4 address of the original direction tuple of the conntrack entry */
+	NXM_NX_CT_IPV6_SRC   = 122 /* nicira extension: ct_ipv6_src, source IPv6 address of the original direction tuple of the conntrack entry */
+	NXM_NX_CT_IPV6_DST   = 123 /* nicira extension: ct_ipv6_dst, destination IPv6 address of the original direction tuple of the conntrack entry */
+	NXM_NX_CT_TP_SRC     = 124 /* nicira extension: ct_tp_src, transport layer source port of the original direction tuple of the conntrack entry */
+	NXM_NX_CT_TP_DST     = 125 /* nicira extension: ct_tp_dst, transport layer destination port of the original direction tuple of the conntrack entry */
 )
 
 // IN_PORT field
@@ -1390,7 +1421,7 @@ func NewSctpSrcField(port uint16) *MatchField {
 
 // ARP Host Address field message, used by arp_sha and arp_tha match
 type ArpXHaField struct {
-	arpHa net.HardwareAddr
+	ArpHa net.HardwareAddr
 }
 
 func (m *ArpXHaField) Len() uint16 {
@@ -1398,7 +1429,7 @@ func (m *ArpXHaField) Len() uint16 {
 }
 func (m *ArpXHaField) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, m.Len())
-	copy(data, m.arpHa)
+	copy(data, m.ArpHa)
 	return
 }
 
@@ -1406,7 +1437,7 @@ func (m *ArpXHaField) UnmarshalBinary(data []byte) error {
 	if len(data) < int(m.Len()) {
 		return errors.New("The byte array has wrong size to unmarshal ArpXHaField message")
 	}
-	copy(m.arpHa, data[:6])
+	copy(m.ArpHa, data[:6])
 	return nil
 }
 
@@ -1417,7 +1448,7 @@ func NewArpThaField(arpTha net.HardwareAddr) *MatchField {
 	f.HasMask = false
 
 	arpThaField := new(ArpXHaField)
-	arpThaField.arpHa = arpTha
+	arpThaField.ArpHa = arpTha
 	f.Value = arpThaField
 	f.Length = uint8(arpThaField.Len())
 	return f
@@ -1430,7 +1461,7 @@ func NewArpShaField(arpSha net.HardwareAddr) *MatchField {
 	f.HasMask = false
 
 	arpXHAField := new(ArpXHaField)
-	arpXHAField.arpHa = arpSha
+	arpXHAField.ArpHa = arpSha
 	f.Value = arpXHAField
 	f.Length = uint8(arpXHAField.Len())
 	return f

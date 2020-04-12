@@ -8,11 +8,11 @@ import (
 )
 
 type Uint16Message struct {
-	data uint16
+	Data uint16
 }
 
 func newUint16Message(data uint16) *Uint16Message {
-	return &Uint16Message{data: data}
+	return &Uint16Message{Data: data}
 }
 
 func (m *Uint16Message) Len() uint16 {
@@ -21,7 +21,7 @@ func (m *Uint16Message) Len() uint16 {
 
 func (m *Uint16Message) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, m.Len())
-	binary.BigEndian.PutUint16(data, m.data)
+	binary.BigEndian.PutUint16(data, m.Data)
 	return
 }
 
@@ -29,16 +29,16 @@ func (m *Uint16Message) UnmarshalBinary(data []byte) error {
 	if len(data) < 2 {
 		return errors.New("the []byte is too short to unmarshal a full Uint16Message")
 	}
-	m.data = binary.BigEndian.Uint16(data[:2])
+	m.Data = binary.BigEndian.Uint16(data[:2])
 	return nil
 }
 
 type Uint32Message struct {
-	data uint32
+	Data uint32
 }
 
 func newUint32Message(data uint32) *Uint32Message {
-	return &Uint32Message{data: data}
+	return &Uint32Message{Data: data}
 }
 
 func (m *Uint32Message) Len() uint16 {
@@ -47,7 +47,7 @@ func (m *Uint32Message) Len() uint16 {
 
 func (m *Uint32Message) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, m.Len())
-	binary.BigEndian.PutUint32(data, m.data)
+	binary.BigEndian.PutUint32(data, m.Data)
 	return
 }
 
@@ -55,7 +55,32 @@ func (m *Uint32Message) UnmarshalBinary(data []byte) error {
 	if len(data) < 4 {
 		return errors.New("the []byte is too short to unmarshal a full Uint32Message")
 	}
-	m.data = binary.BigEndian.Uint32(data[:4])
+	m.Data = binary.BigEndian.Uint32(data[:4])
+	return nil
+}
+
+type ByteArrayField struct {
+	Data   []byte
+	length uint8
+}
+
+// Len returns the length of ByteArrayField. The length of ByteArrayField should be multiple of 8 byte.
+func (m *ByteArrayField) Len() uint16 {
+	return uint16(m.length)
+}
+
+func (m *ByteArrayField) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, m.Len())
+	copy(data, m.Data)
+	return
+}
+
+func (m *ByteArrayField) UnmarshalBinary(data []byte) error {
+	expectLength := m.Len()
+	if len(data) < int(expectLength) {
+		return errors.New("The byte array has wrong size to unmarshal ByteArrayField message")
+	}
+	m.Data = data[:expectLength]
 	return nil
 }
 
@@ -186,6 +211,31 @@ func NewRegMatchField(idx int, data uint32, dataRng *NXRange) *MatchField {
 	return field
 }
 
+func newNXTunMetadataHeader(idx int, hasMask bool) *MatchField {
+	idKey := fmt.Sprintf("NXM_NX_TUN_METADATA%d", idx)
+	header, _ := FindFieldHeaderByName(idKey, hasMask)
+	return header
+}
+
+func NewTunMetadataField(idx int, data []byte, mask []byte) *MatchField {
+	var field *MatchField
+	field = newNXTunMetadataHeader(idx, len(mask) > 0)
+
+	field.Value = &ByteArrayField{
+		Data:   data,
+		length: uint8(len(data)),
+	}
+	field.Length = uint8(len(data))
+	if len(mask) > 0 {
+		field.Mask = &ByteArrayField{
+			Data:   mask,
+			length: uint8(len(mask)),
+		}
+		field.Length += uint8(len(mask))
+	}
+	return field
+}
+
 func NewCTStateMatchField(states *CTStates) *MatchField {
 	field, _ := FindFieldHeaderByName("NXM_NX_CT_STATE", true)
 	field.Value = newUint32Message(states.data)
@@ -265,9 +315,9 @@ func NewNxARPShaMatchField(addr net.HardwareAddr, mask net.HardwareAddr) *MatchF
 	var field *MatchField
 	field, _ = FindFieldHeaderByName("NXM_NX_ARP_SHA", mask != nil)
 
-	field.Value = &ArpXHaField{arpHa: addr}
+	field.Value = &ArpXHaField{ArpHa: addr}
 	if mask != nil {
-		field.Mask = &ArpXHaField{arpHa: mask}
+		field.Mask = &ArpXHaField{ArpHa: mask}
 	}
 
 	return field
@@ -277,9 +327,9 @@ func NewNxARPThaMatchField(addr net.HardwareAddr, mask net.HardwareAddr) *MatchF
 	var field *MatchField
 	field, _ = FindFieldHeaderByName("NXM_NX_ARP_THA", mask != nil)
 
-	field.Value = &ArpXHaField{arpHa: addr}
+	field.Value = &ArpXHaField{ArpHa: addr}
 	if mask != nil {
-		field.Mask = &ArpXHaField{arpHa: mask}
+		field.Mask = &ArpXHaField{ArpHa: mask}
 	}
 
 	return field

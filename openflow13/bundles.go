@@ -5,7 +5,6 @@ import (
 	"errors"
 	"unsafe"
 
-	"github.com/contiv/libOpenflow/common"
 	"github.com/contiv/libOpenflow/util"
 )
 
@@ -60,30 +59,18 @@ const (
 
 // BundleControl is a message to control the bundle.
 type BundleControl struct {
-	common.Header
-	ExperimenterID   uint32
-	ExperimenterType uint32
-	BundleID         uint32
-	Type             uint16
-	Flags            uint16
+	BundleID uint32
+	Type     uint16
+	Flags    uint16
 }
 
 func (b *BundleControl) Len() (n uint16) {
-	length := b.Header.Len()
-	return length + uint16(unsafe.Sizeof(b.ExperimenterID)+unsafe.Sizeof(b.ExperimenterType)+unsafe.Sizeof(b.BundleID)+unsafe.Sizeof(b.Type)+unsafe.Sizeof(b.Flags))
+	return uint16(unsafe.Sizeof(b.BundleID) + unsafe.Sizeof(b.Type) + unsafe.Sizeof(b.Flags))
 }
 
 func (b *BundleControl) MarshalBinary() (data []byte, err error) {
-	b.Header.Length = b.Len()
 	data = make([]byte, b.Len())
 	n := 0
-	headerBytes, err := b.Header.MarshalBinary()
-	copy(data[n:], headerBytes)
-	n += len(headerBytes)
-	binary.BigEndian.PutUint32(data[n:], b.ExperimenterID)
-	n += 4
-	binary.BigEndian.PutUint32(data[n:], b.ExperimenterType)
-	n += 4
 	binary.BigEndian.PutUint32(data[n:], b.BundleID)
 	n += 4
 	binary.BigEndian.PutUint16(data[n:], b.Type)
@@ -97,28 +84,25 @@ func (b *BundleControl) UnmarshalBinary(data []byte) error {
 	if len(data) < int(b.Len()) {
 		return errors.New("the []byte is too short to unmarshal a full BundleControl message")
 	}
-	err := b.Header.UnmarshalBinary(data[:4])
-	n := b.Header.Len()
-	b.ExperimenterID = binary.BigEndian.Uint32(data[n:])
-	n += 4
-	b.ExperimenterType = binary.BigEndian.Uint32(data[n:])
-	n += 4
+	n := 0
 	b.BundleID = binary.BigEndian.Uint32(data[n:])
 	n += 4
 	b.Type = binary.BigEndian.Uint16(data[n:])
 	n += 2
 	b.Flags = binary.BigEndian.Uint16(data[n:])
 	n += 2
-	return err
+	return nil
 }
 
-func NewBundleControl() *BundleControl {
-	b := new(BundleControl)
-	b.Header = NewOfp13Header()
-	b.Header.Type = Type_Experimenter
-	b.ExperimenterID = ONF_EXPERIMENTER_ID
-	b.ExperimenterType = Type_BundleCtrl
-	return b
+func NewBundleControl(bundleControl *BundleControl) *VendorHeader {
+	h := NewOfp13Header()
+	h.Type = Type_Experimenter
+	return &VendorHeader{
+		Header:           h,
+		Vendor:           ONF_EXPERIMENTER_ID,
+		ExperimenterType: Type_BundleCtrl,
+		VendorData:       bundleControl,
+	}
 }
 
 type BundlePropertyExperimenter struct {
@@ -180,19 +164,15 @@ func NewBundlePropertyExperimenter() *BundlePropertyExperimenter {
 // close the bundle and commit it. The Switch will realized added messages in the bundle. Discard the bundle after close
 // it, if the added messages are not wanted to realize on the switch.
 type BundleAdd struct {
-	common.Header
-	ExperimenterID   uint32
-	ExperimenterType uint32
-	BundleID         uint32
-	pad              [2]byte
-	Flags            uint16
-	Message          util.Message
-	Properties       []BundlePropertyExperimenter
+	BundleID   uint32
+	pad        [2]byte
+	Flags      uint16
+	Message    util.Message
+	Properties []BundlePropertyExperimenter
 }
 
 func (b *BundleAdd) Len() (n uint16) {
-	length := b.Header.Len()
-	length += uint16(unsafe.Sizeof(b.ExperimenterID) + unsafe.Sizeof(b.ExperimenterType) + unsafe.Sizeof(b.BundleID) + unsafe.Sizeof(b.Flags))
+	length := uint16(unsafe.Sizeof(b.BundleID) + unsafe.Sizeof(b.Flags))
 	length += uint16(len(b.pad))
 	length += b.Message.Len()
 	if b.Properties != nil {
@@ -204,19 +184,8 @@ func (b *BundleAdd) Len() (n uint16) {
 }
 
 func (b *BundleAdd) MarshalBinary() (data []byte, err error) {
-	b.Header.Length = b.Len()
 	data = make([]byte, b.Len())
-	headerBytes, err := b.Header.MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
 	n := 0
-	copy(data[n:], headerBytes)
-	n += len(headerBytes)
-	binary.BigEndian.PutUint32(data[n:], b.ExperimenterID)
-	n += 4
-	binary.BigEndian.PutUint32(data[n:], b.ExperimenterType)
-	n += 4
 	binary.BigEndian.PutUint32(data[n:], b.BundleID)
 	n += 4
 	// skip padding headerBytes
@@ -244,15 +213,8 @@ func (b *BundleAdd) MarshalBinary() (data []byte, err error) {
 }
 
 func (b *BundleAdd) UnmarshalBinary(data []byte) error {
-	err := b.Header.UnmarshalBinary(data[:4])
-	if err != nil {
-		return err
-	}
-	n := b.Header.Len()
-	b.ExperimenterID = binary.BigEndian.Uint32(data[n:])
-	n += 4
-	b.ExperimenterType = binary.BigEndian.Uint32(data[n:])
-	n += 4
+	var err error
+	n := 0
 	b.BundleID = binary.BigEndian.Uint32(data[n:])
 	n += 4
 	// skip padding bytes
@@ -263,42 +225,43 @@ func (b *BundleAdd) UnmarshalBinary(data []byte) error {
 	if err != nil {
 		return err
 	}
-	n += b.Message.Len()
-	if n < b.Header.Length {
+	n += int(b.Message.Len())
+	if n < len(data) {
 		b.Properties = make([]BundlePropertyExperimenter, 0)
-
-	}
-	for n < b.Header.Length {
-		var property BundlePropertyExperimenter
-		err = property.UnmarshalBinary(data[n:])
-		if err != nil {
-			return err
+		for n < len(data) {
+			var property BundlePropertyExperimenter
+			err = property.UnmarshalBinary(data[n:])
+			if err != nil {
+				return err
+			}
+			b.Properties = append(b.Properties, property)
+			n += int(property.Len())
 		}
-		b.Properties = append(b.Properties, property)
-		n += property.Len()
 	}
 	return err
 }
 
-func NewBundleAdd() *BundleAdd {
-	b := new(BundleAdd)
-	b.Header = NewOfp13Header()
-	b.Header.Type = Type_Experimenter
-	b.ExperimenterID = ONF_EXPERIMENTER_ID
-	b.ExperimenterType = Type_BundleAdd
-	return b
+func NewBundleAdd(bundleAdd *BundleAdd) *VendorHeader {
+	h := NewOfp13Header()
+	h.Type = Type_Experimenter
+	return &VendorHeader{
+		Header:           h,
+		Vendor:           ONF_EXPERIMENTER_ID,
+		ExperimenterType: Type_BundleAdd,
+		VendorData:       bundleAdd,
+	}
 }
 
-type BundleError struct {
+type VendorError struct {
 	*ErrorMsg
 	ExperimenterID uint32
 }
 
-func (e *BundleError) Len() uint16 {
+func (e *VendorError) Len() uint16 {
 	return e.ErrorMsg.Len() + uint16(unsafe.Sizeof(e.ExperimenterID))
 }
 
-func (e *BundleError) MarshalBinary() (data []byte, err error) {
+func (e *VendorError) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, int(e.Len()))
 	n := 0
 
@@ -317,7 +280,7 @@ func (e *BundleError) MarshalBinary() (data []byte, err error) {
 	return
 }
 
-func (e *BundleError) UnmarshalBinary(data []byte) error {
+func (e *VendorError) UnmarshalBinary(data []byte) error {
 	n := 0
 	e.ErrorMsg = new(ErrorMsg)
 	err := e.Header.UnmarshalBinary(data[n:])
@@ -339,8 +302,8 @@ func (e *BundleError) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-func NewBundleError() *BundleError {
-	e := new(BundleError)
+func NewBundleError() *VendorError {
+	e := new(VendorError)
 	e.ErrorMsg = NewErrorMsg()
 	e.Header = NewOfp13Header()
 	e.Type = ET_EXPERIMENTER

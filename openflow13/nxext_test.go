@@ -132,8 +132,8 @@ func TestUint32Message(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to invoke Uint32Message.UnmarshalBinary, %v", err)
 	}
-	if testMsg.data != tgtData {
-		t.Errorf("Failed to retrieve uint32 from Uint32Message, tgt: %d, actual: %d", tgtData, testMsg.data)
+	if testMsg.Data != tgtData {
+		t.Errorf("Failed to retrieve uint32 from Uint32Message, tgt: %d, actual: %d", tgtData, testMsg.Data)
 	}
 }
 
@@ -152,17 +152,17 @@ func TestUint16Message(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to invoke Uint32Message.UnmarshalBinary, %v", err)
 	}
-	if testMsg.data != tgtData {
-		t.Errorf("Failed to retrieve uint32 from Uint32Message, tgt: %d, actual: %d", tgtData, testMsg.data)
+	if testMsg.Data != tgtData {
+		t.Errorf("Failed to retrieve uint32 from Uint32Message, tgt: %d, actual: %d", tgtData, testMsg.Data)
 	}
 }
 
 func TestNewUintXMask(t *testing.T) {
 	tgtData32 := uint32(0xff)
 	rng1 := &NXRange{start: 0, end: 7}
-	testMsg := &Uint32Message{data: rng1.ToUint32Mask()}
-	if testMsg.data != tgtData32 {
-		t.Errorf("Failed to invoke newUint32Mask, expected: %02x, actual: %02x", tgtData32, testMsg.data)
+	testMsg := &Uint32Message{Data: rng1.ToUint32Mask()}
+	if testMsg.Data != tgtData32 {
+		t.Errorf("Failed to invoke newUint32Mask, expected: %02x, actual: %02x", tgtData32, testMsg.Data)
 	}
 }
 
@@ -327,7 +327,7 @@ func TestNXLearnSpec(t *testing.T) {
 		}
 	}
 
-	for _, spec := range prepareLearnSpeces() {
+	for _, spec := range prepareLearnSpecs() {
 		testFunc(spec)
 	}
 }
@@ -357,12 +357,299 @@ func TestNXActionLearn(t *testing.T) {
 		TableID:        2,
 		FinIdleTimeout: 2,
 		FinHardTimeout: 4,
-		LearnSpecs:     prepareLearnSpeces(),
+		LearnSpecs:     prepareLearnSpecs(),
 	}
 	testFunc(action)
 }
 
-func prepareLearnSpeces() []*NXLearnSpec {
+func TestNewNXActionRegLoad2(t *testing.T) {
+	testFunc := func(oriAction *NXActionRegLoad2) {
+		data, err := oriAction.MarshalBinary()
+		if err != nil {
+			t.Fatalf("Failed to Marshal message: %v", err)
+		}
+		newAction := new(NXActionRegLoad2)
+		err = newAction.UnmarshalBinary(data)
+		if err != nil {
+			t.Fatalf("Failed to UnMarshal message: %v", err)
+		}
+		oriField := oriAction.DstField
+		newField := newAction.DstField
+		if oriField.Class != newField.Class {
+			t.Error("MatchField class not equal")
+		}
+		if oriField.Field != newField.Field {
+			t.Error("MatchField field not equal")
+		}
+		if oriField.Length != newField.Length {
+			t.Error("MatchField length not equal")
+		}
+		if oriField.HasMask != newField.HasMask {
+			t.Error("MatchFiedl mask not equal")
+		}
+		oriData, _ := oriField.Value.MarshalBinary()
+		newData, err := newField.Value.MarshalBinary()
+		if err != nil {
+			t.Errorf("Failed to Marshal MatchField value: %v", err)
+		}
+		if !bytes.Equal(oriData, newData) {
+			t.Error("Field data not equal")
+		}
+	}
+
+	dstField, _ := FindFieldHeaderByName("NXM_NX_CT_MARK", false)
+	dstField.Value = newUint32Message(uint32(0x1234))
+	load2 := NewNXActionRegLoad2(dstField)
+	testFunc(load2)
+}
+
+func TestNXActionController(t *testing.T) {
+	testFunc := func(oriAction *NXActionController) {
+		data, err := oriAction.MarshalBinary()
+		if err != nil {
+			t.Fatalf("Failed to Marshal message: %v", err)
+		}
+		newAction := new(NXActionController)
+		err = newAction.UnmarshalBinary(data)
+		if err != nil {
+			t.Fatalf("Failed to UnMarshal message: %v", err)
+		}
+		if oriAction.ControllerID != newAction.ControllerID {
+			t.Error("ControllerID not equal")
+		}
+		if oriAction.MaxLen != newAction.MaxLen {
+			t.Error("MaxLen not equal")
+		}
+		if oriAction.Reason != newAction.Reason {
+			t.Error("Reason not equal")
+		}
+	}
+
+	nxController := NewNXActionController(uint16(1001))
+	nxController.Reason = uint8(0)
+	nxController.MaxLen = uint16(128)
+	testFunc(nxController)
+}
+
+func TestSetControllerID(t *testing.T) {
+	testFunc := func(oriMessage *VendorHeader) {
+		data, err := oriMessage.MarshalBinary()
+		if err != nil {
+			t.Fatalf("Failed to Marshal message: %v", err)
+		}
+		newMessage := new(VendorHeader)
+		err = newMessage.UnmarshalBinary(data)
+		if err != nil {
+			t.Fatalf("Failed to UnMarshal message: %v", err)
+		}
+		newControllerID, ok := newMessage.VendorData.(*ControllerID)
+		if !ok {
+			t.Fatalf("Failed to cast ControllerID from result")
+		}
+		oriControllerID, _ := oriMessage.VendorData.(*ControllerID)
+		if newControllerID.ID != oriControllerID.ID {
+			t.Error("Controller ID not equal")
+		}
+	}
+
+	controllerID := uint16(102)
+	message := NewSetControllerID(controllerID)
+	testFunc(message)
+}
+
+func TestTLVTableMap(t *testing.T) {
+	testFunc := func(oriMessage *TLVTableMap) {
+		data, err := oriMessage.MarshalBinary()
+		if err != nil {
+			t.Fatalf("Failed to Marshal message: %v", err)
+		}
+		newMesage := new(TLVTableMap)
+		err = newMesage.UnmarshalBinary(data)
+		if err != nil {
+			t.Fatalf("Failed to UnMarshal message: %v", err)
+		}
+		if err = tlvMapEquals(oriMessage, newMesage); err != nil {
+			t.Error(err.Error())
+		}
+	}
+
+	tlvMap := &TLVTableMap{
+		OptClass:  0xffff,
+		OptType:   0,
+		OptLength: 16,
+		Index:     0,
+	}
+	testFunc(tlvMap)
+}
+
+func TestTLVTableMod(t *testing.T) {
+	testFunc := func(oriMessage *TLVTableMod) {
+		data, err := oriMessage.MarshalBinary()
+		if err != nil {
+			t.Fatalf("Failed to Marshal message: %v", err)
+		}
+		newMessage := new(TLVTableMod)
+		err = newMessage.UnmarshalBinary(data)
+		if err != nil {
+			t.Fatalf("Failed to UnMarshal message: %v", err)
+		}
+		if err = tlvMapModEqual(oriMessage, newMessage); err != nil {
+			t.Error(err.Error())
+		}
+	}
+
+	tlvMod := prepareTLVTableMod()
+	testFunc(tlvMod)
+}
+
+func TestTLTableModMessage(t *testing.T) {
+	testFunc := func(oriMessage *VendorHeader) {
+		data, err := oriMessage.MarshalBinary()
+		if err != nil {
+			t.Fatalf("Failed to Marshal message: %v", err)
+		}
+		newMessage := new(VendorHeader)
+		err = newMessage.UnmarshalBinary(data)
+		if err != nil {
+			t.Fatalf("Failed to UnMarshal message: %v", err)
+		}
+		oriTLVMod := oriMessage.VendorData.(*TLVTableMod)
+		newTLVMod, ok := newMessage.VendorData.(*TLVTableMod)
+		if !ok {
+			t.Fatalf("Failed to cast TLVTableMod from result")
+		}
+		if err = tlvMapModEqual(oriTLVMod, newTLVMod); err != nil {
+			t.Error(err.Error())
+		}
+	}
+
+	tlvModMessage := NewTLVTableModMessage(prepareTLVTableMod())
+	testFunc(tlvModMessage)
+}
+
+func TestTLVTableReply(t *testing.T) {
+	testFunc := func(oriMessage *TLVTableReply) {
+		data, err := oriMessage.MarshalBinary()
+		if err != nil {
+			t.Fatalf("Failed to Marshal message: %v", err)
+		}
+		newMessage := new(TLVTableReply)
+		err = newMessage.UnmarshalBinary(data)
+		if err != nil {
+			t.Fatalf("Failed to UnMarshal message: %v", err)
+		}
+		if err = tlvTableReplyEqual(oriMessage, newMessage); err != nil {
+			t.Error(err)
+		}
+	}
+
+	reply := &TLVTableReply{
+		MaxSpace:  248,
+		MaxFields: 62,
+		TlvMaps:   prepareTLVTableMaps(),
+	}
+	testFunc(reply)
+}
+
+func TestTLVTableReplyMessage(t *testing.T) {
+	testFunc := func(oriMessage *VendorHeader) {
+		data, err := oriMessage.MarshalBinary()
+		if err != nil {
+			t.Fatalf("Failed to Marshal message: %v", err)
+		}
+		newMessage := new(VendorHeader)
+		err = newMessage.UnmarshalBinary(data)
+		if err != nil {
+			t.Fatalf("Failed to UnMarshal message: %v", err)
+		}
+		oriTLVReply := oriMessage.VendorData.(*TLVTableReply)
+		newTLVReply, ok := newMessage.VendorData.(*TLVTableReply)
+		if !ok {
+			t.Fatalf("Failed to cast TLVTableReply from result")
+		}
+		if err = tlvTableReplyEqual(oriTLVReply, newTLVReply); err != nil {
+			t.Error(err.Error())
+		}
+	}
+
+	reply := &TLVTableReply{
+		MaxSpace:  248,
+		MaxFields: 62,
+		TlvMaps:   prepareTLVTableMaps(),
+	}
+	tlvReplyMessage := NewNXTVendorHeader(Type_TlvTableReply)
+	tlvReplyMessage.VendorData = reply
+	testFunc(tlvReplyMessage)
+}
+
+func tlvTableReplyEqual(oriMessage, newMessage *TLVTableReply) error {
+	if oriMessage.MaxSpace != newMessage.MaxSpace {
+		return errors.New("Max space not equal")
+	}
+	if oriMessage.MaxFields != newMessage.MaxFields {
+		return errors.New("Max field not equal")
+	}
+	for i := range oriMessage.TlvMaps {
+		if err := tlvMapEquals(oriMessage.TlvMaps[i], newMessage.TlvMaps[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func tlvMapModEqual(oriMessage *TLVTableMod, newMessage *TLVTableMod) error {
+	if oriMessage.Command != newMessage.Command {
+		return errors.New("message command not equal")
+	}
+	for i := range oriMessage.TlvMaps {
+		if err := tlvMapEquals(oriMessage.TlvMaps[i], newMessage.TlvMaps[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func prepareTLVTableMaps() []*TLVTableMap {
+	tlvMap1 := &TLVTableMap{
+		OptClass:  0xffff,
+		OptType:   0,
+		OptLength: 16,
+		Index:     0,
+	}
+	tlvMap2 := &TLVTableMap{
+		OptClass:  0xffff,
+		OptType:   1,
+		OptLength: 16,
+		Index:     1,
+	}
+	return []*TLVTableMap{tlvMap1, tlvMap2}
+}
+
+func prepareTLVTableMod() *TLVTableMod {
+
+	tlvMapMod := &TLVTableMod{
+		Command: NXTTMC_ADD,
+		TlvMaps: prepareTLVTableMaps(),
+	}
+	return tlvMapMod
+}
+func tlvMapEquals(oriTlvMap, newTlvMap *TLVTableMap) error {
+	if oriTlvMap.OptClass != newTlvMap.OptClass {
+		return errors.New("TLVTableMap option: Class not equal")
+	}
+	if oriTlvMap.OptLength != newTlvMap.OptLength {
+		return errors.New("TLVTableMap option: Length not equal")
+	}
+	if oriTlvMap.OptType != newTlvMap.OptType {
+		return errors.New("TLVTableMap option: Type not equal")
+	}
+	if oriTlvMap.Index != newTlvMap.Index {
+		return errors.New("TLVTableMap option: Index not equal")
+	}
+	return nil
+}
+
+func prepareLearnSpecs() []*NXLearnSpec {
 	srcValue1 := make([]byte, 2)
 	binary.BigEndian.PutUint16(srcValue1, 99)
 	dstField1, _ := FindFieldHeaderByName("NXM_OF_IN_PORT", false)
