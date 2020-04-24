@@ -32,13 +32,13 @@ const (
 	NXAST_LEARN            = 16 // Nicira extended action: learn
 	NXAST_EXIT             = 17 // Nicira extended action: exit
 	NXAST_DEC_TTL          = 18 // Nicira extended action: dec_ttl
-	NXAST_FIN_TIMEOUT      = 19 // Nicira extended action: output:field
-	NXAST_CONTROLLER       = 20 // Nicira extended action: fin_timeout
+	NXAST_FIN_TIMEOUT      = 19 // Nicira extended action: fin_timeout
+	NXAST_CONTROLLER       = 20 // Nicira extended action: controller(reason=xx,max_len=xx,id=xx)
 	NXAST_DEC_TTL_CNT_IDS  = 21 // Nicira extended action: dec_ttl(id1,[id2]...)
 	NXAST_PUSH_MPLS        = 23 // Nicira extended action: push_mpls
 	NXAST_POP_MPLS         = 24 // Nicira extended action: pop_mpls
 	NXAST_SET_MPLS_TTL     = 25 // Nicira extended action: set_mpls_ttl
-	NXAST_DEC_MPLS_TTL     = 26 // Nicira extended action: set_mpls_ttl
+	NXAST_DEC_MPLS_TTL     = 26 // Nicira extended action: dec_mpls_ttl
 	NXAST_STACK_PUSH       = 27 // Nicira extended action: push:src
 	NXAST_STACK_POP        = 28 // Nicira extended action: pop:dst
 	NXAST_SAMPLE           = 29 // Nicira extended action: sample
@@ -143,6 +143,7 @@ func DecodeNxAction(data []byte) Action {
 		a = new(NXActionDecTTL)
 	case NXAST_FIN_TIMEOUT:
 	case NXAST_CONTROLLER:
+		a = new(NXActionController)
 	case NXAST_DEC_TTL_CNT_IDS:
 		a = new(NXActionDecTTLCntIDs)
 	case NXAST_PUSH_MPLS:
@@ -157,6 +158,7 @@ func DecodeNxAction(data []byte) Action {
 	case NXAST_OUTPUT_REG2:
 		a = new(NXActionOutputReg)
 	case NXAST_REG_LOAD2:
+		a = new(NXActionRegLoad2)
 	case NXAST_CONJUNCTION:
 		a = new(NXActionConjunction)
 	case NXAST_CT:
@@ -1342,4 +1344,117 @@ func NewNXActionNote() *NXActionNote {
 	return &NXActionNote{
 		NXActionHeader: NewNxActionHeader(NXAST_NOTE),
 	}
+}
+
+// NXActionRegLoad2 is NX action to load data to a specified field.
+type NXActionRegLoad2 struct {
+	*NXActionHeader
+	DstField *MatchField
+	pad      []byte
+}
+
+func NewNXActionRegLoad2(dstField *MatchField) *NXActionRegLoad2 {
+	a := new(NXActionRegLoad2)
+	a.NXActionHeader = NewNxActionHeader(NXAST_REG_LOAD2)
+	a.DstField = dstField
+	return a
+}
+
+func (a *NXActionRegLoad2) Len() (n uint16) {
+	return 8 * ((a.NXActionHeader.Len() + a.DstField.Len() + 7) / 8)
+}
+
+func (a *NXActionRegLoad2) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, int(a.Len()))
+	var b []byte
+	n := 0
+	a.Length = a.Len()
+	b, err = a.NXActionHeader.MarshalBinary()
+	copy(data[n:], b)
+	n += len(b)
+	fieldData, err := a.DstField.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	copy(data[n:], fieldData)
+	n += len(fieldData)
+	return
+}
+
+func (a *NXActionRegLoad2) UnmarshalBinary(data []byte) error {
+	n := 0
+	a.NXActionHeader = new(NXActionHeader)
+	err := a.NXActionHeader.UnmarshalBinary(data[n:])
+	n += int(a.NXActionHeader.Len())
+	if len(data) < int(a.Length) {
+		return errors.New("the []byte is too short to unmarshal a full NXActionRegLoad2 message")
+	}
+	a.DstField = new(MatchField)
+	err = a.DstField.UnmarshalBinary(data[n:])
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// NXActionController is NX action to output packet to the Controller set with a specified ID.
+type NXActionController struct {
+	*NXActionHeader
+	MaxLen       uint16
+	ControllerID uint16
+	Reason       uint8
+	pad          uint8
+}
+
+func (a *NXActionController) Len() uint16 {
+	return a.NXActionHeader.Len() + 6
+}
+
+func (a *NXActionController) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, a.Len())
+	var b []byte
+	n := 0
+	a.Length = a.Len()
+	b, err = a.NXActionHeader.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	copy(data[n:], b)
+	n += len(b)
+	binary.BigEndian.PutUint16(data[n:], a.MaxLen)
+	n += 2
+	binary.BigEndian.PutUint16(data[n:], a.ControllerID)
+	n += 2
+	data[n] = a.Reason
+	n += 1
+
+	return data, nil
+}
+
+func (a *NXActionController) UnmarshalBinary(data []byte) error {
+	a.NXActionHeader = new(NXActionHeader)
+	n := 0
+	err := a.NXActionHeader.UnmarshalBinary(data[n:])
+	if err != nil {
+		return err
+	}
+	if len(data) < int(a.Length) {
+		return errors.New("the []byte is too short to unmarshal a full NXActionController message")
+	}
+	n += int(a.NXActionHeader.Len())
+	a.MaxLen = binary.BigEndian.Uint16(data[n:])
+	n += 2
+	a.ControllerID = binary.BigEndian.Uint16(data[n:])
+	n += 2
+	a.Reason = data[n]
+	n += 1
+	return nil
+}
+
+func NewNXActionController(controllerID uint16) *NXActionController {
+	a := new(NXActionController)
+	a.NXActionHeader = NewNxActionHeader(NXAST_CONTROLLER)
+	a.ControllerID = controllerID
+	a.Length = a.NXActionHeader.Len() + 6
+	return a
 }

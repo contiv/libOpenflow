@@ -12,7 +12,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"net"
-	"unsafe"
 
 	"github.com/contiv/libOpenflow/common"
 	"github.com/contiv/libOpenflow/protocol"
@@ -112,7 +111,7 @@ func Parse(b []byte) (message util.Message, err error) {
 		}
 		switch errMsg.Type {
 		case ET_EXPERIMENTER:
-			message = new(BundleError)
+			message = new(VendorError)
 			err = message.UnmarshalBinary(b)
 		default:
 			message = errMsg
@@ -124,21 +123,8 @@ func Parse(b []byte) (message util.Message, err error) {
 		message = new(common.Header)
 		err = message.UnmarshalBinary(b)
 	case Type_Experimenter:
-		vh := new(VendorHeader)
-		err = vh.UnmarshalBinary(b)
-		if err != nil {
-			return
-		}
-		switch vh.ExperimenterType {
-		case Type_BundleCtrl:
-			message = new(BundleControl)
-			err = message.UnmarshalBinary(b)
-		case Type_BundleAdd:
-			message = new(BundleAdd)
-			err = message.UnmarshalBinary(b)
-		default:
-			message = vh
-		}
+		message = new(VendorHeader)
+		err = message.UnmarshalBinary(b)
 	case Type_FeaturesRequest:
 		message = NewFeaturesRequest()
 		err = message.UnmarshalBinary(b)
@@ -781,10 +767,15 @@ type VendorHeader struct {
 	Header           common.Header /*Type OFPT_VENDOR*/
 	Vendor           uint32
 	ExperimenterType uint32
+	VendorData       util.Message
 }
 
 func (v *VendorHeader) Len() (n uint16) {
-	return v.Header.Len() + uint16(unsafe.Sizeof(v.Vendor)) + uint16(unsafe.Sizeof(v.ExperimenterType))
+	length := uint16(16)
+	if v.VendorData != nil {
+		length += v.VendorData.Len()
+	}
+	return length
 }
 
 func (v *VendorHeader) MarshalBinary() (data []byte, err error) {
@@ -798,11 +789,19 @@ func (v *VendorHeader) MarshalBinary() (data []byte, err error) {
 	n += 4
 	binary.BigEndian.PutUint32(data[n:], v.ExperimenterType)
 	n += 4
+	if v.VendorData != nil {
+		vd, err := v.VendorData.MarshalBinary()
+		if err != nil {
+			return nil, err
+		}
+		copy(data[n:], vd)
+		n += len(vd)
+	}
 	return
 }
 
 func (v *VendorHeader) UnmarshalBinary(data []byte) error {
-	if len(data) < int(v.Len()) {
+	if len(data) < 16 {
 		return errors.New("The []byte the wrong size to unmarshal an " +
 			"VendorHeader message.")
 	}
@@ -812,5 +811,12 @@ func (v *VendorHeader) UnmarshalBinary(data []byte) error {
 	n += 4
 	v.ExperimenterType = binary.BigEndian.Uint32(data[n:])
 	n += 4
+	if n < int(v.Header.Length) {
+		var err error
+		v.VendorData, err = decodeVendorData(v.ExperimenterType, data[n:v.Header.Length])
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }

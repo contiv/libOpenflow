@@ -84,6 +84,13 @@ const (
 	NXM_OF_ARP_TPA
 )
 
+// TLV_Table_Mod commands.
+const (
+	NXTTMC_ADD = iota
+	NXTTMC_DELETE
+	NXTTMC_CLEAR
+)
+
 func newMatchFieldHeader(class uint16, field uint8, length uint8) *MatchField {
 	var fieldLength = length
 	return &MatchField{Class: class, Field: field, Length: fieldLength, HasMask: false}
@@ -155,6 +162,13 @@ var oxxFieldHeaderMap = map[string]*MatchField{
 	"NXM_NX_CT_LABEL":      newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_CT_LABEL, 16),
 	"NXM_NX_TUN_IPV6_SRC":  newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_IPV6_SRC, 16),
 	"NXM_NX_TUN_IPV6_DST":  newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_IPV6_DST, 16),
+	"NXM_NX_CT_NW_PROTO":   newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_CT_NW_PROTO, 1),
+	"NXM_NX_CT_NW_SRC":     newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_CT_NW_SRC, 4),
+	"NXM_NX_CT_NW_DST":     newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_CT_NW_DST, 4),
+	"NXM_NX_CT_IPV6_SRC":   newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_CT_IPV6_SRC, 16),
+	"NXM_NX_CT_IPV6_DST":   newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_CT_IPV6_DST, 16),
+	"NXM_NX_CT_TP_SRC":     newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_CT_TP_SRC, 2),
+	"NXM_NX_CT_TP_DST":     newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_CT_TP_DST, 2),
 	"NXM_NX_TUN_METADATA0": newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_METADATA0, 128),
 	"NXM_NX_TUN_METADATA1": newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_METADATA1, 128),
 	"NXM_NX_TUN_METADATA2": newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_METADATA2, 128),
