@@ -61,12 +61,12 @@ func (m *Uint32Message) UnmarshalBinary(data []byte) error {
 
 type ByteArrayField struct {
 	Data   []byte
-	length uint8
+	Length uint8
 }
 
 // Len returns the length of ByteArrayField. The length of ByteArrayField should be multiple of 8 byte.
 func (m *ByteArrayField) Len() uint16 {
-	return uint16(m.length)
+	return uint16(m.Length)
 }
 
 func (m *ByteArrayField) MarshalBinary() (data []byte, err error) {
@@ -223,13 +223,13 @@ func NewTunMetadataField(idx int, data []byte, mask []byte) *MatchField {
 
 	field.Value = &ByteArrayField{
 		Data:   data,
-		length: uint8(len(data)),
+		Length: uint8(len(data)),
 	}
 	field.Length = uint8(len(data))
 	if len(mask) > 0 {
 		field.Mask = &ByteArrayField{
 			Data:   mask,
-			length: uint8(len(mask)),
+			Length: uint8(len(mask)),
 		}
 		field.Length += uint8(len(mask))
 	}

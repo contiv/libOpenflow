@@ -344,7 +344,9 @@ func DecodeMatchField(class uint16, field uint8, length uint8, hasMask bool, dat
 		case NXM_NX_ARP_THA:
 			val = new(ArpXHaField)
 		case NXM_NX_IPV6_SRC:
+			val = new(Ipv6SrcField)
 		case NXM_NX_IPV6_DST:
+			val = new(Ipv6DstField)
 		case NXM_NX_ICMPV6_TYPE:
 		case NXM_NX_ICMPV6_CODE:
 		case NXM_NX_ND_TARGET:
@@ -384,9 +386,9 @@ func DecodeMatchField(class uint16, field uint8, length uint8, hasMask bool, dat
 		case NXM_NX_TUN_METADATA7:
 			msg := new(ByteArrayField)
 			if !hasMask {
-				msg.length = length
+				msg.Length = length
 			} else {
-				msg.length = length / 2
+				msg.Length = length / 2
 			}
 			val = msg
 		case NXM_NX_TUN_FLAGS:
@@ -399,6 +401,9 @@ func DecodeMatchField(class uint16, field uint8, length uint8, hasMask bool, dat
 		case NXM_NX_CT_LABEL:
 			val = new(CTLabel)
 		case NXM_NX_TUN_IPV6_SRC:
+			val = new(Ipv6SrcField)
+		case NXM_NX_TUN_IPV6_DST:
+			val = new(Ipv6DstField)
 		case NXM_NX_CT_NW_PROTO:
 			val = new(IpProtoField)
 		case NXM_NX_CT_NW_SRC:
@@ -409,6 +414,20 @@ func DecodeMatchField(class uint16, field uint8, length uint8, hasMask bool, dat
 			val = new(PortField)
 		case NXM_NX_CT_TP_SRC:
 			val = new(PortField)
+		case NXM_NX_XXREG0:
+			fallthrough
+		case NXM_NX_XXREG1:
+			fallthrough
+		case NXM_NX_XXREG2:
+			fallthrough
+		case NXM_NX_XXREG3:
+			msg := new(ByteArrayField)
+			if !hasMask {
+				msg.Length = length
+			} else {
+				msg.Length = length / 2
+			}
+			val = msg
 		default:
 			log.Printf("Unhandled Field: %d in Class: %d", field, class)
 			return nil, fmt.Errorf("Bad pkt class: %v field: %v data: %v", class, field, data)
@@ -557,6 +576,10 @@ const (
 	NXM_NX_CT_LABEL      = 108 /* nicira extension: ct_label for conn_track */
 	NXM_NX_TUN_IPV6_SRC  = 109 /* nicira extension: tun_dst_ipv6, dst IPv6 address of tunnel */
 	NXM_NX_TUN_IPV6_DST  = 110 /* nicira extension: tun_dst_ipv6, src IPv6 address of tunnel */
+	NXM_NX_XXREG0        = 111 /* nicira extension: xxreg0 */
+	NXM_NX_XXREG1        = 112 /* nicira extension: xxreg0 */
+	NXM_NX_XXREG2        = 113 /* nicira extension: xxreg0 */
+	NXM_NX_XXREG3        = 114 /* nicira extension: xxreg0 */
 	NXM_NX_CT_NW_PROTO   = 119 /* nicira extension: ct_nw_proto, the protocol byte in the IPv4 or IPv6 header forthe original direction tuple of the conntrack entry */
 	NXM_NX_CT_NW_SRC     = 120 /* nicira extension: ct_nw_src, source IPv4 address of the original direction tuple of the conntrack entry */
 	NXM_NX_CT_NW_DST     = 121 /* nicira extension: ct_nw_dst, destination IPv4 address of the original direction tuple of the conntrack entry */
@@ -1518,7 +1541,6 @@ func NewArpSpaField(arpSpa net.IP) *MatchField {
 	f.Length = uint8(arpXPAField.Len())
 	return f
 }
-
 
 // ACTSET_OUTPUT field
 type ActsetOutputField struct {

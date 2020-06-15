@@ -930,7 +930,7 @@ func (a *NXActionDecTTL) UnmarshalBinary(data []byte) error {
 	err := a.NXActionHeader.UnmarshalBinary(data[n:])
 	n += int(a.NXActionHeader.Len())
 	if len(data) < int(a.Len()) {
-		return errors.New("the []byte is too short to unmarshal a full NXActionRegLoad2 message")
+		return errors.New("the []byte is too short to unmarshal a full NXActionDecTTL message")
 	}
 	a.controllers = binary.BigEndian.Uint16(data[n:])
 	n += 2
