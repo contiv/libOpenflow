@@ -33,14 +33,13 @@ func (i *ICMP) MarshalBinary() (data []byte, err error) {
 
 func (i *ICMP) UnmarshalBinary(data []byte) error {
 	if len(data) < 4 {
-		return errors.New("The []byte is too short to unmarshal a full ARP message.")
+		return errors.New("The []byte is too short to unmarshal a full ICMP message.")
 	}
 	i.Type = data[0]
 	i.Code = data[1]
 	i.Checksum = binary.BigEndian.Uint16(data[2:4])
 
-	for n := range data[4:] {
-		i.Data = append(i.Data, data[n])
-	}
+	i.Data = make([]byte, len(data)-4)
+	copy(i.Data, data[4:])
 	return nil
 }

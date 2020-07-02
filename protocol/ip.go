@@ -135,7 +135,10 @@ func (i *IPv4) UnmarshalBinary(data []byte) error {
 	i.NWDst = data[n : n+4]
 	n += 4
 
-	i.Options.UnmarshalBinary(data[n:int(i.IHL*4)])
+	err := i.Options.UnmarshalBinary(data[n:int(i.IHL*4)])
+	if err != nil {
+		return err
+	}
 	n += int(i.IHL*4) - n
 
 	switch i.Protocol {
