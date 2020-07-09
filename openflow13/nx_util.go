@@ -177,6 +177,10 @@ var oxxFieldHeaderMap = map[string]*MatchField{
 	"NXM_NX_TUN_METADATA5": newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_METADATA5, 128),
 	"NXM_NX_TUN_METADATA6": newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_METADATA6, 128),
 	"NXM_NX_TUN_METADATA7": newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_TUN_METADATA7, 128),
+	"NXM_NX_XXREG0":        newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_XXREG0, 16),
+	"NXM_NX_XXREG1":        newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_XXREG1, 16),
+	"NXM_NX_XXREG2":        newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_XXREG2, 16),
+	"NXM_NX_XXREG3":        newMatchFieldHeader(OXM_CLASS_NXM_1, NXM_NX_XXREG3, 16),
 
 	"OXM_OF_IN_PORT":        newMatchFieldHeader(OXM_CLASS_OPENFLOW_BASIC, OXM_FIELD_IN_PORT, 4),
 	"OXM_OF_IN_PHY_PORT":    newMatchFieldHeader(OXM_CLASS_OPENFLOW_BASIC, OXM_FIELD_IN_PHY_PORT, 4),
