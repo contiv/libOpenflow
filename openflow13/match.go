@@ -257,7 +257,9 @@ func DecodeMatchField(class uint16, field uint8, length uint8, hasMask bool, dat
 		case OXM_FIELD_SCTP_DST:
 			val = new(PortField)
 		case OXM_FIELD_ICMPV4_TYPE:
+			val = new(IcmpTypeField)
 		case OXM_FIELD_ICMPV4_CODE:
+			val = new(IcmpCodeField)
 		case OXM_FIELD_ARP_OP:
 			val = new(ArpOperField)
 		case OXM_FIELD_ARP_SPA:
@@ -274,10 +276,15 @@ func DecodeMatchField(class uint16, field uint8, length uint8, hasMask bool, dat
 			val = new(Ipv6DstField)
 		case OXM_FIELD_IPV6_FLABEL:
 		case OXM_FIELD_ICMPV6_TYPE:
+			val = new(IcmpTypeField)
 		case OXM_FIELD_ICMPV6_CODE:
+			val = new(IcmpCodeField)
 		case OXM_FIELD_IPV6_ND_TARGET:
+			val = new(Ipv6DstField)
 		case OXM_FIELD_IPV6_ND_SLL:
+			val = new(EthSrcField)
 		case OXM_FIELD_IPV6_ND_TLL:
+			val = new(EthDstField)
 		case OXM_FIELD_MPLS_LABEL:
 			val = new(MplsLabelField)
 		case OXM_FIELD_MPLS_TC:
@@ -348,10 +355,15 @@ func DecodeMatchField(class uint16, field uint8, length uint8, hasMask bool, dat
 		case NXM_NX_IPV6_DST:
 			val = new(Ipv6DstField)
 		case NXM_NX_ICMPV6_TYPE:
+			val = new(IcmpTypeField)
 		case NXM_NX_ICMPV6_CODE:
+			val = new(IcmpCodeField)
 		case NXM_NX_ND_TARGET:
+			val = new(Ipv6DstField)
 		case NXM_NX_ND_SLL:
+			val = new(EthDstField)
 		case NXM_NX_ND_TLL:
+			val = new(EthSrcField)
 		case NXM_NX_IP_FRAG:
 		case NXM_NX_IPV6_LABEL:
 		case NXM_NX_IP_ECN:
@@ -1574,4 +1586,48 @@ func NewActsetOutputField(actsetOutputPort uint32) *MatchField {
 	f.Length = uint8(actsetOutputField.Len())
 
 	return f
+}
+
+type IcmpTypeField struct {
+	Type uint8
+}
+
+func (f *IcmpTypeField) Len() uint16 {
+	return 1
+}
+
+func (f *IcmpTypeField) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, 1)
+	data[0] = f.Type
+	return
+}
+
+func (f *IcmpTypeField) UnmarshalBinary(data []byte) error {
+	if len(data) < int(f.Len()) {
+		return errors.New("The byte array has wrong size to unmarshal IcmpTypeField message")
+	}
+	f.Type = data[0]
+	return nil
+}
+
+type IcmpCodeField struct {
+	Code uint8
+}
+
+func (f *IcmpCodeField) Len() uint16 {
+	return 1
+}
+
+func (f *IcmpCodeField) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, 1)
+	data[0] = f.Code
+	return
+}
+
+func (f *IcmpCodeField) UnmarshalBinary(data []byte) error {
+	if len(data) < int(f.Len()) {
+		return errors.New("The byte array has wrong size to unmarshal IcmpCodeField message")
+	}
+	f.Code = data[0]
+	return nil
 }
