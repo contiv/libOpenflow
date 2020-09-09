@@ -116,6 +116,8 @@ func (e *Ethernet) UnmarshalBinary(data []byte) error {
 	switch e.Ethertype {
 	case IPv4_MSG:
 		e.Data = new(IPv4)
+	case IPv6_MSG:
+		e.Data = new(IPv6)
 	case ARP_MSG:
 		e.Data = new(ARP)
 	default:
