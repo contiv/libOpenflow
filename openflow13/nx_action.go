@@ -1336,7 +1336,7 @@ func (a *NXActionNote) UnmarshalBinary(data []byte) error {
 		return errors.New("the []byte is too short to unmarshal a full NXActionNote message")
 	}
 	n := a.NXActionHeader.Len()
-	a.Note = data[n:]
+	a.Note = data[n:a.Length]
 	return nil
 }
 
