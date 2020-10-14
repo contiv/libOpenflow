@@ -1205,6 +1205,12 @@ func (m *PortField) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
+func NewPortField(port uint16) *PortField {
+	f := new(PortField)
+	f.port = port
+	return f
+}
+
 // TCP_SRC field
 func NewTcpSrcField(port uint16) *MatchField {
 	f := new(MatchField)
@@ -1212,8 +1218,7 @@ func NewTcpSrcField(port uint16) *MatchField {
 	f.Field = OXM_FIELD_TCP_SRC
 	f.HasMask = false
 
-	tcpSrcField := new(PortField)
-	tcpSrcField.port = port
+	tcpSrcField := NewPortField(port)
 	f.Value = tcpSrcField
 	f.Length = uint8(tcpSrcField.Len())
 
@@ -1227,8 +1232,7 @@ func NewTcpDstField(port uint16) *MatchField {
 	f.Field = OXM_FIELD_TCP_DST
 	f.HasMask = false
 
-	tcpSrcField := new(PortField)
-	tcpSrcField.port = port
+	tcpSrcField := NewPortField(port)
 	f.Value = tcpSrcField
 	f.Length = uint8(tcpSrcField.Len())
 
@@ -1242,8 +1246,7 @@ func NewUdpSrcField(port uint16) *MatchField {
 	f.Field = OXM_FIELD_UDP_SRC
 	f.HasMask = false
 
-	tcpSrcField := new(PortField)
-	tcpSrcField.port = port
+	tcpSrcField := NewPortField(port)
 	f.Value = tcpSrcField
 	f.Length = uint8(tcpSrcField.Len())
 
@@ -1257,8 +1260,7 @@ func NewUdpDstField(port uint16) *MatchField {
 	f.Field = OXM_FIELD_UDP_DST
 	f.HasMask = false
 
-	tcpSrcField := new(PortField)
-	tcpSrcField.port = port
+	tcpSrcField := NewPortField(port)
 	f.Value = tcpSrcField
 	f.Length = uint8(tcpSrcField.Len())
 
