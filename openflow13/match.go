@@ -422,6 +422,10 @@ func DecodeMatchField(class uint16, field uint8, length uint8, hasMask bool, dat
 			val = new(Ipv4SrcField)
 		case NXM_NX_CT_NW_DST:
 			val = new(Ipv4DstField)
+		case NXM_NX_CT_IPV6_SRC:
+			val = new(Ipv6SrcField)
+		case NXM_NX_CT_IPV6_DST:
+			val = new(Ipv6DstField)
 		case NXM_NX_CT_TP_DST:
 			val = new(PortField)
 		case NXM_NX_CT_TP_SRC:
