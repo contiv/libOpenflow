@@ -374,6 +374,7 @@ func DecodeMatchField(class uint16, field uint8, length uint8, hasMask bool, dat
 		case NXM_NX_TUN_IPV4_DST:
 			val = new(TunnelIpv4DstField)
 		case NXM_NX_PKT_MARK:
+			val = new(Uint32Message)
 		case NXM_NX_TCP_FLAGS:
 		case NXM_NX_DP_HASH:
 		case NXM_NX_RECIRC_ID:
