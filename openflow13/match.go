@@ -1433,6 +1433,54 @@ func NewTunnelIpv4DstField(tunnelIpDst net.IP, tunnelIpDstMask *net.IP) *MatchFi
 	return f
 }
 
+// Return a MatchField for tunnel ipv6 src addr
+func NewTunnelIpv6SrcField(tunnelIpv6Src net.IP, tunnelIpv6SrcMask *net.IP) *MatchField {
+	f := new(MatchField)
+	f.Class = OXM_CLASS_NXM_1
+	f.Field = NXM_NX_TUN_IPV6_SRC
+	f.HasMask = false
+
+	tunnelIpv6SrcField := new(Ipv6SrcField)
+	tunnelIpv6SrcField.Ipv6Src = tunnelIpv6Src
+	f.Value = tunnelIpv6SrcField
+	f.Length = uint8(tunnelIpv6SrcField.Len())
+
+	// Add the mask
+	if tunnelIpv6SrcMask != nil {
+		mask := new(Ipv6SrcField)
+		mask.Ipv6Src = *tunnelIpv6SrcMask
+		f.Mask = mask
+		f.HasMask = true
+		f.Length += uint8(mask.Len())
+	}
+
+	return f
+}
+
+// Return a MatchField for tunnel ipv6 dst addr
+func NewTunnelIpv6DstField(tunnelIpv6Dst net.IP, tunnelIpv6DstMask *net.IP) *MatchField {
+	f := new(MatchField)
+	f.Class = OXM_CLASS_NXM_1
+	f.Field = NXM_NX_TUN_IPV6_DST
+	f.HasMask = false
+
+	tunnelIpv6DstField := new(Ipv6DstField)
+	tunnelIpv6DstField.Ipv6Dst = tunnelIpv6Dst
+	f.Value = tunnelIpv6DstField
+	f.Length = uint8(tunnelIpv6DstField.Len())
+
+	// Add the mask
+	if tunnelIpv6DstMask != nil {
+		mask := new(Ipv6DstField)
+		mask.Ipv6Dst = *tunnelIpv6DstMask
+		f.Mask = mask
+		f.HasMask = true
+		f.Length += uint8(mask.Len())
+	}
+
+	return f
+}
+
 // SCTP_DST field
 func NewSctpDstField(port uint16) *MatchField {
 	f := new(MatchField)
