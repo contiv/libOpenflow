@@ -10,7 +10,7 @@ import (
 	"github.com/contiv/libOpenflow/common"
 	"github.com/contiv/libOpenflow/openflow13"
 	"github.com/contiv/libOpenflow/util"
-	"github.com/sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 )
 
 var helloMessage *common.Hello

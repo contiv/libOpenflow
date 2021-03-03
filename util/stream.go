@@ -6,7 +6,7 @@ import (
 	"net"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 )
 
 const numParserGoroutines = 25
