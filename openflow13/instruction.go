@@ -252,6 +252,38 @@ type InstrMeter struct {
 	MeterId uint32
 }
 
+func NewInstrMeter(meterId uint32) *InstrMeter {
+	instr := new(InstrMeter)
+	instr.Type = InstrType_METER
+	instr.MeterId = meterId
+	instr.Length = instr.Len()
+
+	return instr
+}
+
+func (instr *InstrMeter) Len() (n uint16) {
+	return 8
+}
+
+func (instr *InstrMeter) MarshalBinary() (data []byte, err error) {
+	data, err = instr.InstrHeader.MarshalBinary()
+
+	b := make([]byte, 4)
+	binary.BigEndian.PutUint32(b, instr.MeterId)
+
+	data = append(data, b...)
+
+	return
+}
+
+func (instr *InstrMeter) UnmarshalBinary(data []byte) error {
+	instr.InstrHeader.UnmarshalBinary(data[:4])
+
+	instr.MeterId = binary.BigEndian.Uint32(data[4:8])
+
+	return nil
+}
+
 func (instr *InstrMeter) AddAction(act Action, prepend bool) error {
 	return errors.New("Not supported on this instrction")
 }
