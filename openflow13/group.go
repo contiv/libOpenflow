@@ -18,9 +18,11 @@ const (
 )
 
 const (
-	OFPGC_ADD    = 0 /* New group. */
-	OFPGC_MODIFY = 1 /* Modify all matching groups. */
-	OFPGC_DELETE = 2 /* Delete all matching groups. */
+	OFPGC_ADD           = 0 /* New group. */
+	OFPGC_MODIFY        = 1 /* Modify all matching groups. */
+	OFPGC_DELETE        = 2 /* Delete all matching groups. */
+	OFPGC_INSERT_BUCKET = 3 /* Insert action buckets to the already available
+	list of action buckets in a matching group */
 )
 
 const (
