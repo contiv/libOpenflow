@@ -195,13 +195,13 @@ type ActionSetqueue struct {
 func NewActionSetQueue(queue uint32) *ActionSetqueue {
 	a := new(ActionSetqueue)
 	a.Type = ActionType_SetQueue
-	a.Length = 8
+	a.Length = a.Len()
 	a.QueueId = queue
 	return a
 }
 
 func (a *ActionSetqueue) Len() (n uint16) {
-	return a.ActionHeader.Len() + 12
+	return a.ActionHeader.Len() + 4
 }
 
 func (a *ActionSetqueue) MarshalBinary() (data []byte, err error) {
@@ -232,7 +232,7 @@ type ActionGroup struct {
 func NewActionGroup(group uint32) *ActionGroup {
 	a := new(ActionGroup)
 	a.Type = ActionType_Group
-	a.Length = 8
+	a.Length = a.Len()
 	a.GroupId = group
 	return a
 }
@@ -283,7 +283,7 @@ type ActionDecNwTtl struct {
 func NewActionDecNwTtl() *ActionDecNwTtl {
 	act := new(ActionDecNwTtl)
 	act.Type = ActionType_DecNwTtl
-	act.Length = 8
+	act.Length = act.Len()
 	act.pad = make([]byte, 4)
 	return act
 }
@@ -323,7 +323,7 @@ type ActionPush struct {
 func NewActionPushVlan(etherType uint16) *ActionPush {
 	a := new(ActionPush)
 	a.Type = ActionType_PushVlan
-	a.Length = 8
+	a.Length = a.Len()
 	a.EtherType = etherType
 	return a
 }
@@ -331,7 +331,7 @@ func NewActionPushVlan(etherType uint16) *ActionPush {
 func NewActionPushMpls(etherType uint16) *ActionPush {
 	a := new(ActionPush)
 	a.Type = ActionType_PushMpls
-	a.Length = 8
+	a.Length = a.Len()
 	a.EtherType = etherType
 	return a
 }
@@ -364,7 +364,7 @@ type ActionPopVlan struct {
 func NewActionPopVlan() *ActionPopVlan {
 	act := new(ActionPopVlan)
 	act.Type = ActionType_PopVlan
-	act.Length = 8
+	act.Length = act.Len()
 
 	return act
 }
@@ -398,7 +398,7 @@ func NewActionPopMpls(etherType uint16) *ActionPopMpls {
 	act := new(ActionPopMpls)
 	act.Type = ActionType_PopMpls
 	act.EtherType = etherType
-	act.Length = 8
+	act.Length = act.Len()
 
 	return act
 }
