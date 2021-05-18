@@ -24,6 +24,9 @@ const (
 	OFPMF13_PKTPS = 0b0010 /* Rate value in packet/sec. */
 	OFPMF13_BURST = 0b0100 /* Do burst size. */
 	OFPMF13_STATS = 0b1000 /* Collect statistics. */
+
+	METER_BAND_HEADER_LEN = 12
+	METER_BAND_LEN        = 16
 )
 
 type MeterBandHeader struct {
@@ -35,19 +38,16 @@ type MeterBandHeader struct {
 
 func NewMeterBandHeader() *MeterBandHeader {
 	return &MeterBandHeader{
-		Type:      OFPMBT13_DROP,
-		Length:    16,
-		Rate:      100,
-		BurstSize: 200,
+		Length: METER_BAND_LEN,
 	}
 }
 
 func (m *MeterBandHeader) Len() (n uint16) {
-	return 12
+	return METER_BAND_HEADER_LEN
 }
 
 func (m *MeterBandHeader) MarshalBinary() (data []byte, err error) {
-	data = make([]byte, 12)
+	data = make([]byte, m.Len())
 	n := 0
 	binary.BigEndian.PutUint16(data[n:], m.Type)
 	n += 2
@@ -79,16 +79,19 @@ type MeterBandDrop struct {
 }
 
 func (m *MeterBandDrop) Len() (n uint16) {
-	return m.MeterBandHeader.Len() + 4
+	return METER_BAND_LEN
 }
 
 func (m *MeterBandDrop) MarshalBinary() (data []byte, err error) {
-	data, err = m.MeterBandHeader.MarshalBinary()
+	data = make([]byte, m.Len())
+	n := 0
+	mbHdrBytes, err := m.MeterBandHeader.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
-	bytes := make([]byte, 4)
-	return append(data, bytes...), nil
+	copy(data, mbHdrBytes)
+	n += METER_BAND_HEADER_LEN
+	return
 }
 
 func (m *MeterBandDrop) UnmarshalBinary(data []byte) error {
@@ -106,17 +109,20 @@ type MeterBandDSCP struct {
 }
 
 func (m *MeterBandDSCP) Len() (n uint16) {
-	return m.MeterBandHeader.Len() + 4
+	return METER_BAND_LEN
 }
 
 func (m *MeterBandDSCP) MarshalBinary() (data []byte, err error) {
-	data, err = m.MeterBandHeader.MarshalBinary()
+	data = make([]byte, m.Len())
+	n := 0
+	mbHdrBytes, err := m.MeterBandHeader.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
-	bytes := make([]byte, 4)
-	bytes[0] = m.PrecLevel
-	return append(data, bytes...), nil
+	copy(data, mbHdrBytes)
+	n += METER_BAND_HEADER_LEN
+	data[n] = m.PrecLevel
+	return
 }
 
 func (m *MeterBandDSCP) UnmarshalBinary(data []byte) error {
@@ -129,22 +135,25 @@ func (m *MeterBandDSCP) UnmarshalBinary(data []byte) error {
 }
 
 type MeterBandExperimenter struct {
-	MeterBandHeader
-	Experimenter uint32 /* Experimenter ID which takes the same form as in struct ofp_experimenter_header. */
+	MeterBandHeader        /* Type: OFPMBT13_EXPERIMENTER. */
+	Experimenter    uint32 /* Experimenter ID which takes the same form as in struct ofp_experimenter_header. */
 }
 
 func (m *MeterBandExperimenter) Len() (n uint16) {
-	return m.MeterBandHeader.Len() + 4
+	return METER_BAND_LEN
 }
 
 func (m *MeterBandExperimenter) MarshalBinary() (data []byte, err error) {
-	data, err = m.MeterBandHeader.MarshalBinary()
+	data = make([]byte, m.Len())
+	n := 0
+	mbHdrBytes, err := m.MeterBandHeader.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
-	bytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(bytes, m.Experimenter)
-	return append(data, bytes...), nil
+	copy(data, mbHdrBytes)
+	n += METER_BAND_HEADER_LEN
+	binary.BigEndian.PutUint32(data[n:], m.Experimenter)
+	return
 }
 
 func (m *MeterBandExperimenter) UnmarshalBinary(data []byte) error {
@@ -170,10 +179,6 @@ func NewMeterMod() *MeterMod {
 	m := new(MeterMod)
 	m.Header = NewOfp13Header()
 	m.Header.Type = Type_MeterMod
-
-	m.Command = OFPMC_ADD
-	m.Flags = OFPMF13_PKTPS
-	m.MeterId = 1
 	m.MeterBands = make([]util.Message, 0)
 	return m
 }
@@ -199,22 +204,29 @@ func (m *MeterMod) Len() (n uint16) {
 
 func (m *MeterMod) MarshalBinary() (data []byte, err error) {
 	m.Header.Length = m.Len()
-	data, err = m.Header.MarshalBinary()
-
-	bytes := make([]byte, 8)
+	data = make([]byte, m.Len())
 	n := 0
-	binary.BigEndian.PutUint16(bytes[n:], m.Command)
+	hdrBytes, err := m.Header.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	copy(data, hdrBytes)
+	n += int(m.Header.Len())
+	binary.BigEndian.PutUint16(data[n:], m.Command)
 	n += 2
-	binary.BigEndian.PutUint16(bytes[n:], m.Flags)
+	binary.BigEndian.PutUint16(data[n:], m.Flags)
 	n += 2
-	binary.BigEndian.PutUint32(bytes[n:], m.MeterId)
+	binary.BigEndian.PutUint32(data[n:], m.MeterId)
 	n += 4
-	data = append(data, bytes...)
 
 	for _, mb := range m.MeterBands {
-		bytes, err = mb.MarshalBinary()
-		data = append(data, bytes...)
-		log.Debugf("Metermod band: %v", bytes)
+		mbBytes, err := mb.MarshalBinary()
+		if err != nil {
+			return nil, err
+		}
+		copy(data[n:], mbBytes)
+		n += METER_BAND_LEN
+		log.Debugf("Metermod band: %v", mbBytes)
 	}
 
 	log.Debugf("Metermod(%d): %v", len(data), data)
