@@ -25,6 +25,12 @@ const (
 	OFPMF13_BURST = 0b0100 /* Do burst size. */
 	OFPMF13_STATS = 0b1000 /* Collect statistics. */
 
+	/* Meter numbering. Flow meters can use any number up to OFPM_MAX. */
+	OFPM13_MAX        = 0xffff0000 /* Last usable meter. */
+	OFPM13_SLOWPATH   = 0xfffffffd /* Meter for slow datapath. */
+	OFPM13_CONTROLLER = 0xfffffffe /* Meter for controller connection. */
+	OFPM13_ALL        = 0xffffffff /* Represents all meters for stat requests commands. */
+
 	METER_BAND_HEADER_LEN = 12
 	METER_BAND_LEN        = 16
 )
