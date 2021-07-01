@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contiv/libOpenflow/common"
-	"github.com/contiv/libOpenflow/openflow13"
-	"github.com/contiv/libOpenflow/util"
+	"antrea-io/libOpenflow/common"
+	"antrea-io/libOpenflow/openflow13"
+	"antrea-io/libOpenflow/util"
 	"github.com/sirupsen/logrus"
 )
 

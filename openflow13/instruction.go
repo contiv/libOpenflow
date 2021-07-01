@@ -6,7 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 
-	"github.com/contiv/libOpenflow/util"
+	"antrea-io/libOpenflow/util"
 )
 
 // ofp_instruction_type 1.3

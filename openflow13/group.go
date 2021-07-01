@@ -5,7 +5,7 @@ package openflow13
 import (
 	"encoding/binary"
 
-	"github.com/contiv/libOpenflow/common"
+	"antrea-io/libOpenflow/common"
 	log "github.com/sirupsen/logrus"
 )
 

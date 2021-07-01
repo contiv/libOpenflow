@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"net"
 
-	"github.com/contiv/libOpenflow/common"
+	"antrea-io/libOpenflow/common"
 )
 
 // ofp_port 1.3

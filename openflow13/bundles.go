@@ -5,7 +5,7 @@ import (
 	"errors"
 	"unsafe"
 
-	"github.com/contiv/libOpenflow/util"
+	"antrea-io/libOpenflow/util"
 )
 
 // Bundle control types
