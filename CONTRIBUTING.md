@@ -4,6 +4,13 @@ Thank you for taking the time out to contribute to project Antrea!
 
 ## Contribute
 
+### Versioning
+
+This project follows the [semantic versioning
+specification](https://semver.org/). A new Github release is created
+automatically whenever a commit is pushed to the "main" branch which modifies
+the `VERSION` file.
+
 ### Inclusive Naming
 
 For symbol names and documentation, do not introduce new usage of harmful

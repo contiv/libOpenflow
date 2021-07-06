@@ -1,0 +1,24 @@
+name: Release
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'VERSION'
+
+jobs:
+  release:
+    runs-on: [ubuntu-latest]
+    steps:
+    - name: Check-out code
+      uses: actions/checkout@v2
+    - name: Read version
+      run: |
+        echo "version=$(head VERSION)" >> $GITHUB_ENV
+    - name: Create release
+      uses: ncipollo/release-action@v1
+      with:
+        omitBody: true
+        token: "${{ secrets.GITHUB_TOKEN }}"
+        tag: "${{ env.version }}"
+        commit: "${{ env.GITHUB_SHA }}"
