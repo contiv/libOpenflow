@@ -64,7 +64,7 @@ func (h *Header) UnmarshalBinary(data []byte) error {
 }
 
 const (
-	reserved = iota
+	reserved = iota //nolint:deadcode
 	HelloElemType_VersionBitmap
 )
 
@@ -136,10 +136,12 @@ func (h *HelloElemVersionBitmap) Len() (n uint16) {
 
 func (h *HelloElemVersionBitmap) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, int(h.Len()))
-	bytes := make([]byte, 0)
+	var bytes []byte
 	next := 0
 
-	bytes, err = h.HelloElemHeader.MarshalBinary()
+	if bytes, err = h.HelloElemHeader.MarshalBinary(); err != nil {
+		return
+	}
 	copy(data[next:], bytes)
 	next += len(bytes)
 
@@ -202,11 +204,13 @@ func (h *Hello) Len() (n uint16) {
 
 func (h *Hello) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, int(h.Len()))
-	bytes := make([]byte, 0)
+	var bytes []byte
 	next := 0
 
 	h.Header.Length = h.Len()
-	bytes, err = h.Header.MarshalBinary()
+	if bytes, err = h.Header.MarshalBinary(); err != nil {
+		return
+	}
 	copy(data[next:], bytes)
 	next += len(bytes)
 

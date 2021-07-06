@@ -263,9 +263,12 @@ func (e *VendorError) Len() uint16 {
 
 func (e *VendorError) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, int(e.Len()))
+	var headerBytes []byte
 	n := 0
 
-	headerBytes, err := e.Header.MarshalBinary()
+	if headerBytes, err = e.Header.MarshalBinary(); err != nil {
+		return
+	}
 	copy(data[n:], headerBytes)
 	n += len(headerBytes)
 	binary.BigEndian.PutUint16(data[n:], e.Type)
@@ -274,7 +277,9 @@ func (e *VendorError) MarshalBinary() (data []byte, err error) {
 	n += 2
 	binary.BigEndian.PutUint32(data[n:], e.ExperimenterID)
 	n += 4
-	headerBytes, err = e.Data.MarshalBinary()
+	if headerBytes, err = e.Data.MarshalBinary(); err != nil {
+		return
+	}
 	copy(data[n:], headerBytes)
 	n += len(headerBytes)
 	return

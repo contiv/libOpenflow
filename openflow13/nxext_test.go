@@ -180,7 +180,7 @@ func TestNXMFieldHeader(t *testing.T) {
 
 func TestCTLabel(t *testing.T) {
 	var label = [16]byte{}
-	testData, err := hex.DecodeString(fmt.Sprintf("%d", 0x12345678))
+	testData, _ := hex.DecodeString(fmt.Sprintf("%d", 0x12345678))
 	copy(label[:], testData)
 	field := newCTLabel(label)
 	data, err := field.MarshalBinary()
@@ -726,7 +726,7 @@ func nxLearnSpecEquals(oriSpec, newSpec *NXLearnSpec) error {
 		return err
 	}
 	if !bytes.Equal(oriSpec.SrcValue, newSpec.SrcValue) {
-		errors.New("spec src value not equal")
+		return errors.New("spec src value not equal")
 	}
 	return nil
 }
@@ -776,7 +776,7 @@ func translateMessages(t *testing.T, act1, act2 Action, compare func(act1, act2 
 	if err != nil {
 		t.Fatalf("Failed to Unmarshal NXActionCTNAT: %v", err)
 	}
-	if act1.Header().Type != act1.Header().Type || act1.Header().Type != ActionType_Experimenter {
+	if act1.Header().Type != act2.Header().Type || act1.Header().Type != ActionType_Experimenter {
 		t.Errorf("Action type is not equal")
 	}
 	nxHeader1 := new(NXActionHeader)

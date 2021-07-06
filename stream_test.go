@@ -7,10 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"antrea-io/libOpenflow/common"
 	"antrea-io/libOpenflow/openflow13"
 	"antrea-io/libOpenflow/util"
-	"github.com/sirupsen/logrus"
 )
 
 var helloMessage *common.Hello
@@ -35,7 +36,6 @@ func (f *fakeConn) Read(b []byte) (int, error) {
 }
 
 func (f *fakeConn) Write(b []byte) (int, error) {
-	b, _ = helloMessage.MarshalBinary()
 	return len(b), nil
 }
 

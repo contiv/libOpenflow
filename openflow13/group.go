@@ -5,8 +5,9 @@ package openflow13
 import (
 	"encoding/binary"
 
-	"antrea-io/libOpenflow/common"
 	log "github.com/sirupsen/logrus"
+
+	"antrea-io/libOpenflow/common"
 )
 
 const (

@@ -2,10 +2,13 @@ package protocol
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
-	"math/rand"
+	"math"
+	"math/big"
 	"net"
 )
 
@@ -28,7 +31,10 @@ const (
 	DHCP_MSG_INFORM
 )
 
-var dhcpMagic uint32 = 0x63825363
+var (
+	dhcpMagic uint32 = 0x63825363
+	maxUint32        = big.NewInt(math.MaxUint32)
+)
 
 type DHCP struct {
 	Operation    DHCPOperation
@@ -74,9 +80,20 @@ const (
 //	FLAG_BROADCAST_MASK uint16 = (1 << FLAG_BROADCAST)
 )
 
+func getRandomXID() (uint32, error) {
+	xid, err := rand.Int(rand.Reader, maxUint32)
+	if err != nil {
+		return 0, err
+	}
+	return uint32(xid.Uint64()), nil
+}
+
 func NewDHCP(xid uint32, op DHCPOperation, hwtype byte) (*DHCP, error) {
 	if xid == 0 {
-		xid = rand.Uint32()
+		var err error
+		if xid, err = getRandomXID(); err != nil {
+			return nil, fmt.Errorf("Failed to generate random XID: %v", err)
+		}
 	}
 	switch hwtype {
 	case DHCP_HW_ETHERNET:
@@ -267,56 +284,56 @@ func (d *DHCP) Write(b []byte) (n int, err error) {
 
 // Standard options (RFC1533)
 const (
-	DHCP_OPT_PAD                      byte = iota
-	DHCP_OPT_SUBNET_MASK                   // 0x01, 4, net.IP
-	DHCP_OPT_TIME_OFFSET                   // 0x02, 4, int32 (signed seconds from UTC)
-	DHCP_OPT_DEFAULT_GATEWAY               // 0x03, n*4, [n]net.IP
-	DHCP_OPT_TIME_SERVER                   // 0x04, n*4, [n]net.IP
-	DHCP_OPT_NAME_SERVER                   // 0x05, n*4, [n]net.IP
-	DHCP_OPT_DOMAIN_NAME_SERVERS           // 0x06, n*4, [n]net.IP
-	DHCP_OPT_LOG_SERVER                    // 0x07, n*4, [n]net.IP
-	DHCP_OPT_COOKIE_SERVER                 // 0x08, n*4, [n]net.IP
-	DHCP_OPT_LPR_SERVER                    // 0x09, n*4, [n]net.IP
-	DHCP_OPT_IMPRESS_SERVER                // 0x0a, n*4, [n]net.IP
-	DHCP_OPT_RLSERVER                      // 0x0b, n*4, [n]net.IP
-	DHCP_OPT_HOST_NAME                     // 0x0c, n, string
-	DHCP_OPT_BOOTFILE_SIZE                 // 0x0d, 2, uint16
-	DHCP_OPT_MERIT_DUMP_FILE               // 0x0e, >1, string
-	DHCP_OPT_DOMAIN_NAME                   // 0x0f, n, string
-	DHCP_OPT_SWAP_SERVER                   // 0x10, n*4, [n]net.IP
-	DHCP_OPT_ROOT_PATH                     // 0x11, n, string
-	DHCP_OPT_EXTENSIONS_PATH               // 0x12, n, string
-	DHCP_OPT_IP_FORWARDING                 // 0x13, 1, bool
-	DHCP_OPT_SOURCE_ROUTING                // 0x14, 1, bool
-	DHCP_OPT_POLICY_FILTER                 // 0x15, 8*n, [n]{net.IP/net.IP}
-	DHCP_OPT_DGRAM_MTU                     // 0x16, 2, uint16
-	DHCP_OPT_DEFAULT_TTL                   // 0x17, 1, byte
-	DHCP_OPT_PATH_MTU_AGING_TIMEOUT        // 0x18, 4, uint32
-	DHCP_OPT_PATH_PLATEU_TABLE_OPTION      // 0x19, 2*n, []uint16
-	DHCP_OPT_INTERFACE_MTU                 //0x1a, 2, uint16
-	DHCP_OPT_ALL_SUBS_LOCAL                // 0x1b, 1, bool
-	DHCP_OPT_BROADCAST_ADDR                // 0x1c, 4, net.IP
-	DHCP_OPT_MASK_DISCOVERY                // 0x1d, 1, bool
-	DHCP_OPT_MASK_SUPPLIER                 // 0x1e, 1, bool
-	DHCP_OPT_ROUTER_DISCOVERY              // 0x1f, 1, bool
-	DHCP_OPT_ROUTER_SOLICIT_ADDR           // 0x20, 4, net.IP
-	DHCP_OPT_STATIC_ROUTE                  // 0x21, n*8, [n]{net.IP/net.IP} -- note the 2nd is router not mask
-	DHCP_OPT_ARP_TRAILERS                  // 0x22, 1, bool
-	DHCP_OPT_ARP_TIMEOUT                   // 0x23, 4, uint32
-	DHCP_OPT_ETHERNET_ENCAP                // 0x24, 1, bool
-	DHCP_OPT_TCP_TTL                       // 0x25,1, byte
-	DHCP_OPT_TCP_KEEPALIVE_INT             // 0x26,4, uint32
-	DHCP_OPT_TCP_KEEPALIVE_GARBAGE         // 0x27,1, bool
-	DHCP_OPT_NIS_DOMAIN                    // 0x28,n, string
-	DHCP_OPT_NIS_SERVERS                   // 0x29,4*n,  [n]net.IP
-	DHCP_OPT_NTP_SERVERS                   // 0x2a, 4*n, [n]net.IP
-	DHCP_OPT_VENDOR_OPT                    // 0x2b, n, [n]byte // may be encapsulated.
-	DHCP_OPT_NETBIOS_IPNS                  // 0x2c, 4*n, [n]net.IP
-	DHCP_OPT_NETBIOS_DDS                   // 0x2d, 4*n, [n]net.IP
-	DHCP_OPT_NETBIOS_NODE_TYPE             // 0x2e, 1, magic byte
-	DHCP_OPT_NETBIOS_SCOPE                 // 0x2f, n, string
-	DHCP_OPT_X_FONT_SERVER                 // 0x30, n, string
-	DHCP_OPT_X_DISPLAY_MANAGER             // 0x31, n, string
+	DHCP_OPT_PAD                       byte = iota
+	DHCP_OPT_SUBNET_MASK                    // 0x01, 4, net.IP
+	DHCP_OPT_TIME_OFFSET                    // 0x02, 4, int32 (signed seconds from UTC)
+	DHCP_OPT_DEFAULT_GATEWAY                // 0x03, n*4, [n]net.IP
+	DHCP_OPT_TIME_SERVER                    // 0x04, n*4, [n]net.IP
+	DHCP_OPT_NAME_SERVER                    // 0x05, n*4, [n]net.IP
+	DHCP_OPT_DOMAIN_NAME_SERVERS            // 0x06, n*4, [n]net.IP
+	DHCP_OPT_LOG_SERVER                     // 0x07, n*4, [n]net.IP
+	DHCP_OPT_COOKIE_SERVER                  // 0x08, n*4, [n]net.IP
+	DHCP_OPT_LPR_SERVER                     // 0x09, n*4, [n]net.IP
+	DHCP_OPT_IMPRESS_SERVER                 // 0x0a, n*4, [n]net.IP
+	DHCP_OPT_RLSERVER                       // 0x0b, n*4, [n]net.IP
+	DHCP_OPT_HOST_NAME                      // 0x0c, n, string
+	DHCP_OPT_BOOTFILE_SIZE                  // 0x0d, 2, uint16
+	DHCP_OPT_MERIT_DUMP_FILE                // 0x0e, >1, string
+	DHCP_OPT_DOMAIN_NAME                    // 0x0f, n, string
+	DHCP_OPT_SWAP_SERVER                    // 0x10, n*4, [n]net.IP
+	DHCP_OPT_ROOT_PATH                      // 0x11, n, string
+	DHCP_OPT_EXTENSIONS_PATH                // 0x12, n, string
+	DHCP_OPT_IP_FORWARDING                  // 0x13, 1, bool
+	DHCP_OPT_SOURCE_ROUTING                 // 0x14, 1, bool
+	DHCP_OPT_POLICY_FILTER                  // 0x15, 8*n, [n]{net.IP/net.IP}
+	DHCP_OPT_DGRAM_MTU                      // 0x16, 2, uint16
+	DHCP_OPT_DEFAULT_TTL                    // 0x17, 1, byte
+	DHCP_OPT_PATH_MTU_AGING_TIMEOUT         // 0x18, 4, uint32
+	DHCP_OPT_PATH_PLATEAU_TABLE_OPTION      // 0x19, 2*n, []uint16
+	DHCP_OPT_INTERFACE_MTU                  //0x1a, 2, uint16
+	DHCP_OPT_ALL_SUBS_LOCAL                 // 0x1b, 1, bool
+	DHCP_OPT_BROADCAST_ADDR                 // 0x1c, 4, net.IP
+	DHCP_OPT_MASK_DISCOVERY                 // 0x1d, 1, bool
+	DHCP_OPT_MASK_SUPPLIER                  // 0x1e, 1, bool
+	DHCP_OPT_ROUTER_DISCOVERY               // 0x1f, 1, bool
+	DHCP_OPT_ROUTER_SOLICIT_ADDR            // 0x20, 4, net.IP
+	DHCP_OPT_STATIC_ROUTE                   // 0x21, n*8, [n]{net.IP/net.IP} -- note the 2nd is router not mask
+	DHCP_OPT_ARP_TRAILERS                   // 0x22, 1, bool
+	DHCP_OPT_ARP_TIMEOUT                    // 0x23, 4, uint32
+	DHCP_OPT_ETHERNET_ENCAP                 // 0x24, 1, bool
+	DHCP_OPT_TCP_TTL                        // 0x25,1, byte
+	DHCP_OPT_TCP_KEEPALIVE_INT              // 0x26,4, uint32
+	DHCP_OPT_TCP_KEEPALIVE_GARBAGE          // 0x27,1, bool
+	DHCP_OPT_NIS_DOMAIN                     // 0x28,n, string
+	DHCP_OPT_NIS_SERVERS                    // 0x29,4*n,  [n]net.IP
+	DHCP_OPT_NTP_SERVERS                    // 0x2a, 4*n, [n]net.IP
+	DHCP_OPT_VENDOR_OPT                     // 0x2b, n, [n]byte // may be encapsulated.
+	DHCP_OPT_NETBIOS_IPNS                   // 0x2c, 4*n, [n]net.IP
+	DHCP_OPT_NETBIOS_DDS                    // 0x2d, 4*n, [n]net.IP
+	DHCP_OPT_NETBIOS_NODE_TYPE              // 0x2e, 1, magic byte
+	DHCP_OPT_NETBIOS_SCOPE                  // 0x2f, n, string
+	DHCP_OPT_X_FONT_SERVER                  // 0x30, n, string
+	DHCP_OPT_X_DISPLAY_MANAGER              // 0x31, n, string
 
 	DHCP_OPT_SIP_SERVERS byte = 0x78 // 0x78!, n, url
 	DHCP_OPT_END         byte = 0xff
@@ -325,70 +342,70 @@ const (
 // I'm amazed that this is syntactically valid.
 // cool though.
 var DHCPOptionTypeStrings = [256]string{
-	DHCP_OPT_PAD:                      "(padding)",
-	DHCP_OPT_SUBNET_MASK:              "SubnetMask",
-	DHCP_OPT_TIME_OFFSET:              "TimeOffset",
-	DHCP_OPT_DEFAULT_GATEWAY:          "DefaultGateway",
-	DHCP_OPT_TIME_SERVER:              "rfc868", // old time server protocol, stringified to dissuade confusion w. NTP
-	DHCP_OPT_NAME_SERVER:              "ien116", // obscure nameserver protocol, stringified to dissuade confusion w. DNS
-	DHCP_OPT_DOMAIN_NAME_SERVERS:      "DNS",
-	DHCP_OPT_LOG_SERVER:               "mitLCS", // MIT LCS server protocol, yada yada w. Syslog
-	DHCP_OPT_COOKIE_SERVER:            "OPT_COOKIE_SERVER",
-	DHCP_OPT_LPR_SERVER:               "OPT_LPR_SERVER",
-	DHCP_OPT_IMPRESS_SERVER:           "OPT_IMPRESS_SERVER",
-	DHCP_OPT_RLSERVER:                 "OPT_RLSERVER",
-	DHCP_OPT_HOST_NAME:                "Hostname",
-	DHCP_OPT_BOOTFILE_SIZE:            "BootfileSize",
-	DHCP_OPT_MERIT_DUMP_FILE:          "OPT_MERIT_DUMP_FILE",
-	DHCP_OPT_DOMAIN_NAME:              "DomainName",
-	DHCP_OPT_SWAP_SERVER:              "OPT_SWAP_SERVER",
-	DHCP_OPT_ROOT_PATH:                "RootPath",
-	DHCP_OPT_EXTENSIONS_PATH:          "OPT_EXTENSIONS_PATH",
-	DHCP_OPT_IP_FORWARDING:            "OPT_IP_FORWARDING",
-	DHCP_OPT_SOURCE_ROUTING:           "OPT_SOURCE_ROUTING",
-	DHCP_OPT_POLICY_FILTER:            "OPT_POLICY_FILTER",
-	DHCP_OPT_DGRAM_MTU:                "OPT_DGRAM_MTU",
-	DHCP_OPT_DEFAULT_TTL:              "OPT_DEFAULT_TTL",
-	DHCP_OPT_PATH_MTU_AGING_TIMEOUT:   "OPT_PATH_MTU_AGING_TIMEOUT",
-	DHCP_OPT_PATH_PLATEU_TABLE_OPTION: "OPT_PATH_PLATEU_TABLE_OPTION",
-	DHCP_OPT_INTERFACE_MTU:            "OPT_INTERFACE_MTU",
-	DHCP_OPT_ALL_SUBS_LOCAL:           "OPT_ALL_SUBS_LOCAL",
-	DHCP_OPT_BROADCAST_ADDR:           "OPT_BROADCAST_ADDR",
-	DHCP_OPT_MASK_DISCOVERY:           "OPT_MASK_DISCOVERY",
-	DHCP_OPT_MASK_SUPPLIER:            "OPT_MASK_SUPPLIER",
-	DHCP_OPT_ROUTER_DISCOVERY:         "OPT_ROUTER_DISCOVERY",
-	DHCP_OPT_ROUTER_SOLICIT_ADDR:      "OPT_ROUTER_SOLICIT_ADDR",
-	DHCP_OPT_STATIC_ROUTE:             "OPT_STATIC_ROUTE",
-	DHCP_OPT_ARP_TRAILERS:             "OPT_ARP_TRAILERS",
-	DHCP_OPT_ARP_TIMEOUT:              "OPT_ARP_TIMEOUT",
-	DHCP_OPT_ETHERNET_ENCAP:           "OPT_ETHERNET_ENCAP",
-	DHCP_OPT_TCP_TTL:                  "OPT_TCP_TTL",
-	DHCP_OPT_TCP_KEEPALIVE_INT:        "OPT_TCP_KEEPALIVE_INT",
-	DHCP_OPT_TCP_KEEPALIVE_GARBAGE:    "OPT_TCP_KEEPALIVE_GARBAGE",
-	DHCP_OPT_NIS_DOMAIN:               "OPT_NIS_DOMAIN",
-	DHCP_OPT_NIS_SERVERS:              "OPT_NIS_SERVERS",
-	DHCP_OPT_NTP_SERVERS:              "OPT_NTP_SERVERS",
-	DHCP_OPT_VENDOR_OPT:               "OPT_VENDOR_OPT",
-	DHCP_OPT_NETBIOS_IPNS:             "OPT_NETBIOS_IPNS",
-	DHCP_OPT_NETBIOS_DDS:              "OPT_NETBIOS_DDS",
-	DHCP_OPT_NETBIOS_NODE_TYPE:        "OPT_NETBIOS_NODE_TYPE",
-	DHCP_OPT_NETBIOS_SCOPE:            "OPT_NETBIOS_SCOPE",
-	DHCP_OPT_X_FONT_SERVER:            "OPT_X_FONT_SERVER",
-	DHCP_OPT_X_DISPLAY_MANAGER:        "OPT_X_DISPLAY_MANAGER",
-	DHCP_OPT_END:                      "(end)",
-	DHCP_OPT_SIP_SERVERS:              "SipServers",
-	DHCP_OPT_REQUEST_IP:               "RequestIP",
-	DHCP_OPT_LEASE_TIME:               "LeaseTime",
-	DHCP_OPT_EXT_OPTS:                 "ExtOpts",
-	DHCP_OPT_MESSAGE_TYPE:             "MessageType",
-	DHCP_OPT_SERVER_ID:                "ServerID",
-	DHCP_OPT_PARAMS_REQUEST:           "ParamsRequest",
-	DHCP_OPT_MESSAGE:                  "Message",
-	DHCP_OPT_MAX_DHCP_SIZE:            "MaxDHCPSize",
-	DHCP_OPT_T1:                       "Timer1",
-	DHCP_OPT_T2:                       "Timer2",
-	DHCP_OPT_CLASS_ID:                 "ClassID",
-	DHCP_OPT_CLIENT_ID:                "ClientID",
+	DHCP_OPT_PAD:                       "(padding)",
+	DHCP_OPT_SUBNET_MASK:               "SubnetMask",
+	DHCP_OPT_TIME_OFFSET:               "TimeOffset",
+	DHCP_OPT_DEFAULT_GATEWAY:           "DefaultGateway",
+	DHCP_OPT_TIME_SERVER:               "rfc868", // old time server protocol, stringified to dissuade confusion w. NTP
+	DHCP_OPT_NAME_SERVER:               "ien116", // obscure nameserver protocol, stringified to dissuade confusion w. DNS
+	DHCP_OPT_DOMAIN_NAME_SERVERS:       "DNS",
+	DHCP_OPT_LOG_SERVER:                "mitLCS", // MIT LCS server protocol, yada yada w. Syslog
+	DHCP_OPT_COOKIE_SERVER:             "OPT_COOKIE_SERVER",
+	DHCP_OPT_LPR_SERVER:                "OPT_LPR_SERVER",
+	DHCP_OPT_IMPRESS_SERVER:            "OPT_IMPRESS_SERVER",
+	DHCP_OPT_RLSERVER:                  "OPT_RLSERVER",
+	DHCP_OPT_HOST_NAME:                 "Hostname",
+	DHCP_OPT_BOOTFILE_SIZE:             "BootfileSize",
+	DHCP_OPT_MERIT_DUMP_FILE:           "OPT_MERIT_DUMP_FILE",
+	DHCP_OPT_DOMAIN_NAME:               "DomainName",
+	DHCP_OPT_SWAP_SERVER:               "OPT_SWAP_SERVER",
+	DHCP_OPT_ROOT_PATH:                 "RootPath",
+	DHCP_OPT_EXTENSIONS_PATH:           "OPT_EXTENSIONS_PATH",
+	DHCP_OPT_IP_FORWARDING:             "OPT_IP_FORWARDING",
+	DHCP_OPT_SOURCE_ROUTING:            "OPT_SOURCE_ROUTING",
+	DHCP_OPT_POLICY_FILTER:             "OPT_POLICY_FILTER",
+	DHCP_OPT_DGRAM_MTU:                 "OPT_DGRAM_MTU",
+	DHCP_OPT_DEFAULT_TTL:               "OPT_DEFAULT_TTL",
+	DHCP_OPT_PATH_MTU_AGING_TIMEOUT:    "OPT_PATH_MTU_AGING_TIMEOUT",
+	DHCP_OPT_PATH_PLATEAU_TABLE_OPTION: "OPT_PATH_PLATEAU_TABLE_OPTION",
+	DHCP_OPT_INTERFACE_MTU:             "OPT_INTERFACE_MTU",
+	DHCP_OPT_ALL_SUBS_LOCAL:            "OPT_ALL_SUBS_LOCAL",
+	DHCP_OPT_BROADCAST_ADDR:            "OPT_BROADCAST_ADDR",
+	DHCP_OPT_MASK_DISCOVERY:            "OPT_MASK_DISCOVERY",
+	DHCP_OPT_MASK_SUPPLIER:             "OPT_MASK_SUPPLIER",
+	DHCP_OPT_ROUTER_DISCOVERY:          "OPT_ROUTER_DISCOVERY",
+	DHCP_OPT_ROUTER_SOLICIT_ADDR:       "OPT_ROUTER_SOLICIT_ADDR",
+	DHCP_OPT_STATIC_ROUTE:              "OPT_STATIC_ROUTE",
+	DHCP_OPT_ARP_TRAILERS:              "OPT_ARP_TRAILERS",
+	DHCP_OPT_ARP_TIMEOUT:               "OPT_ARP_TIMEOUT",
+	DHCP_OPT_ETHERNET_ENCAP:            "OPT_ETHERNET_ENCAP",
+	DHCP_OPT_TCP_TTL:                   "OPT_TCP_TTL",
+	DHCP_OPT_TCP_KEEPALIVE_INT:         "OPT_TCP_KEEPALIVE_INT",
+	DHCP_OPT_TCP_KEEPALIVE_GARBAGE:     "OPT_TCP_KEEPALIVE_GARBAGE",
+	DHCP_OPT_NIS_DOMAIN:                "OPT_NIS_DOMAIN",
+	DHCP_OPT_NIS_SERVERS:               "OPT_NIS_SERVERS",
+	DHCP_OPT_NTP_SERVERS:               "OPT_NTP_SERVERS",
+	DHCP_OPT_VENDOR_OPT:                "OPT_VENDOR_OPT",
+	DHCP_OPT_NETBIOS_IPNS:              "OPT_NETBIOS_IPNS",
+	DHCP_OPT_NETBIOS_DDS:               "OPT_NETBIOS_DDS",
+	DHCP_OPT_NETBIOS_NODE_TYPE:         "OPT_NETBIOS_NODE_TYPE",
+	DHCP_OPT_NETBIOS_SCOPE:             "OPT_NETBIOS_SCOPE",
+	DHCP_OPT_X_FONT_SERVER:             "OPT_X_FONT_SERVER",
+	DHCP_OPT_X_DISPLAY_MANAGER:         "OPT_X_DISPLAY_MANAGER",
+	DHCP_OPT_END:                       "(end)",
+	DHCP_OPT_SIP_SERVERS:               "SipServers",
+	DHCP_OPT_REQUEST_IP:                "RequestIP",
+	DHCP_OPT_LEASE_TIME:                "LeaseTime",
+	DHCP_OPT_EXT_OPTS:                  "ExtOpts",
+	DHCP_OPT_MESSAGE_TYPE:              "MessageType",
+	DHCP_OPT_SERVER_ID:                 "ServerID",
+	DHCP_OPT_PARAMS_REQUEST:            "ParamsRequest",
+	DHCP_OPT_MESSAGE:                   "Message",
+	DHCP_OPT_MAX_DHCP_SIZE:             "MaxDHCPSize",
+	DHCP_OPT_T1:                        "Timer1",
+	DHCP_OPT_T2:                        "Timer2",
+	DHCP_OPT_CLASS_ID:                  "ClassID",
+	DHCP_OPT_CLIENT_ID:                 "ClientID",
 }
 
 type DHCPOption interface {

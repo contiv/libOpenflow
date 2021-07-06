@@ -154,10 +154,12 @@ func (a *ActionOutput) Len() (n uint16) {
 
 func (a *ActionOutput) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, int(a.Len()))
-	b := make([]byte, 0)
+	var b []byte
 	n := 0
 
-	b, err = a.ActionHeader.MarshalBinary()
+	if b, err = a.ActionHeader.MarshalBinary(); err != nil {
+		return
+	}
 	copy(data[n:], b)
 	n += len(b)
 	binary.BigEndian.PutUint32(data[n:], a.Port)
@@ -243,10 +245,12 @@ func (a *ActionGroup) Len() (n uint16) {
 
 func (a *ActionGroup) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, int(a.Len()))
-	b := make([]byte, 0)
+	var b []byte
 	n := 0
 
-	b, err = a.ActionHeader.MarshalBinary()
+	if b, err = a.ActionHeader.MarshalBinary(); err != nil {
+		return
+	}
 	copy(data[n:], b)
 	n += len(b)
 	binary.BigEndian.PutUint32(data[n:], a.GroupId)
@@ -447,22 +451,31 @@ func (a *ActionSetField) Len() (n uint16) {
 
 func (a *ActionSetField) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, int(a.Len()))
+	var b []byte
 	n := 0
-	b, err := a.ActionHeader.MarshalBinary()
+	if b, err = a.ActionHeader.MarshalBinary(); err != nil {
+		return
+	}
 	copy(data, b)
 	n += int(a.ActionHeader.Len())
 
-	b, err = a.Field.MarshalBinary()
+	if b, err = a.Field.MarshalBinary(); err != nil {
+		return
+	}
 	copy(data[n:], b)
 
 	return
 }
 func (a *ActionSetField) UnmarshalBinary(data []byte) error {
 	n := 0
-	err := a.ActionHeader.UnmarshalBinary(data[n:])
+	if err := a.ActionHeader.UnmarshalBinary(data[n:]); err != nil {
+		return err
+	}
 	n += int(a.ActionHeader.Len())
-	err = a.Field.UnmarshalBinary(data[n:])
+	if err := a.Field.UnmarshalBinary(data[n:]); err != nil {
+		return err
+	}
 	n += int(a.Field.Len())
 
-	return err
+	return nil
 }

@@ -56,7 +56,7 @@ func (e *Ethernet) Len() (n uint16) {
 
 func (e *Ethernet) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, int(e.Len()))
-	bytes := make([]byte, 0)
+	var bytes []byte
 	n := 0
 	copy(data[n:], e.HWDst)
 	n += len(e.HWDst)
@@ -64,8 +64,7 @@ func (e *Ethernet) MarshalBinary() (data []byte, err error) {
 	n += len(e.HWSrc)
 
 	if e.VLANID.VID != 0 {
-		bytes, err = e.VLANID.MarshalBinary()
-		if err != nil {
+		if bytes, err = e.VLANID.MarshalBinary(); err != nil {
 			return
 		}
 		copy(data[n:], bytes)
@@ -76,8 +75,7 @@ func (e *Ethernet) MarshalBinary() (data []byte, err error) {
 	n += 2
 
 	if e.Data != nil {
-		bytes, err = e.Data.MarshalBinary()
-		if err != nil {
+		if bytes, err = e.Data.MarshalBinary(); err != nil {
 			return
 		}
 		copy(data[n:n+len(bytes)], bytes)

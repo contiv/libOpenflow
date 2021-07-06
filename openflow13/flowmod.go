@@ -3,8 +3,9 @@ package openflow13
 import (
 	"encoding/binary"
 
-	"antrea-io/libOpenflow/common"
 	log "github.com/sirupsen/logrus"
+
+	"antrea-io/libOpenflow/common"
 )
 
 // ofp_flow_mod     1.3
@@ -76,7 +77,9 @@ func (f *FlowMod) Len() (n uint16) {
 
 func (f *FlowMod) MarshalBinary() (data []byte, err error) {
 	f.Header.Length = f.Len()
-	data, err = f.Header.MarshalBinary()
+	if data, err = f.Header.MarshalBinary(); err != nil {
+		return
+	}
 
 	bytes := make([]byte, 40)
 	n := 0
@@ -105,11 +108,15 @@ func (f *FlowMod) MarshalBinary() (data []byte, err error) {
 	n += 2 // for pad
 	data = append(data, bytes...)
 
-	bytes, err = f.Match.MarshalBinary()
+	if bytes, err = f.Match.MarshalBinary(); err != nil {
+		return
+	}
 	data = append(data, bytes...)
 
 	for _, instr := range f.Instructions {
-		bytes, err = instr.MarshalBinary()
+		if bytes, err = instr.MarshalBinary(); err != nil {
+			return
+		}
 		data = append(data, bytes...)
 		log.Debugf("flowmod instr: %v", bytes)
 	}
@@ -212,9 +219,12 @@ func (f *FlowRemoved) Len() (n uint16) {
 
 func (f *FlowRemoved) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, int(f.Len()))
+	var bytes []byte
 	next := 0
 
-	bytes, err := f.Header.MarshalBinary()
+	if bytes, err = f.Header.MarshalBinary(); err != nil {
+		return
+	}
 	copy(data[next:], bytes)
 	next += int(f.Header.Len())
 
@@ -241,7 +251,9 @@ func (f *FlowRemoved) MarshalBinary() (data []byte, err error) {
 	binary.BigEndian.PutUint64(data[next:], f.ByteCount)
 	next += 8
 
-	bytes, err = f.Match.MarshalBinary()
+	if bytes, err = f.Match.MarshalBinary(); err != nil {
+		return
+	}
 	copy(data[next:], bytes)
 	next += int(f.Match.Len())
 	return
@@ -249,8 +261,9 @@ func (f *FlowRemoved) MarshalBinary() (data []byte, err error) {
 
 func (f *FlowRemoved) UnmarshalBinary(data []byte) error {
 	next := 0
-	var err error
-	err = f.Header.UnmarshalBinary(data[next:])
+	if err := f.Header.UnmarshalBinary(data[next:]); err != nil {
+		return err
+	}
 	next += int(f.Header.Len())
 
 	f.Cookie = binary.BigEndian.Uint64(data[next:])
@@ -274,10 +287,12 @@ func (f *FlowRemoved) UnmarshalBinary(data []byte) error {
 	f.ByteCount = binary.BigEndian.Uint64(data[next:])
 	next += 8
 
-	err = f.Match.UnmarshalBinary(data[next:])
+	if err := f.Match.UnmarshalBinary(data[next:]); err != nil {
+		return err
+	}
 	next += int(f.Match.Len())
 
-	return err
+	return nil
 }
 
 // ofp_flow_removed_reason 1.3

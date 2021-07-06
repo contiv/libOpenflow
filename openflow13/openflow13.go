@@ -229,11 +229,13 @@ func (p *PacketOut) Len() (n uint16) {
 
 func (p *PacketOut) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, int(p.Len()))
-	b := make([]byte, 0)
+	var b []byte
 	n := 0
 
 	p.Header.Length = p.Len()
-	b, err = p.Header.MarshalBinary()
+	if b, err = p.Header.MarshalBinary(); err != nil {
+		return
+	}
 	copy(data[n:], b)
 	n += len(b)
 
@@ -246,19 +248,25 @@ func (p *PacketOut) MarshalBinary() (data []byte, err error) {
 	n += 6 // for pad
 
 	for _, a := range p.Actions {
-		b, err = a.MarshalBinary()
+		if b, err = a.MarshalBinary(); err != nil {
+			return
+		}
 		copy(data[n:], b)
 		n += len(b)
 	}
 
-	b, err = p.Data.MarshalBinary()
+	if b, err = p.Data.MarshalBinary(); err != nil {
+		return
+	}
 	copy(data[n:], b)
 	n += len(b)
 	return
 }
 
 func (p *PacketOut) UnmarshalBinary(data []byte) error {
-	err := p.Header.UnmarshalBinary(data)
+	if err := p.Header.UnmarshalBinary(data); err != nil {
+		return err
+	}
 	n := p.Header.Len()
 
 	p.BufferId = binary.BigEndian.Uint32(data[n:])
@@ -279,8 +287,7 @@ func (p *PacketOut) UnmarshalBinary(data []byte) error {
 		n += a.Len()
 	}
 
-	err = p.Data.UnmarshalBinary(data[n:])
-	return err
+	return p.Data.UnmarshalBinary(data[n:])
 }
 
 // ofp_packet_in 1.3
@@ -318,7 +325,9 @@ func (p *PacketIn) Len() (n uint16) {
 }
 
 func (p *PacketIn) MarshalBinary() (data []byte, err error) {
-	data, err = p.Header.MarshalBinary()
+	if data, err = p.Header.MarshalBinary(); err != nil {
+		return
+	}
 
 	b := make([]byte, 16)
 	n := 0
@@ -334,20 +343,26 @@ func (p *PacketIn) MarshalBinary() (data []byte, err error) {
 	n += 8
 	data = append(data, b...)
 
-	b, err = p.Match.MarshalBinary()
+	if b, err = p.Match.MarshalBinary(); err != nil {
+		return
+	}
 	data = append(data, b...)
 
 	b = make([]byte, 2)
 	copy(b[0:], p.pad)
 	data = append(data, b...)
 
-	b, err = p.Data.MarshalBinary()
+	if b, err = p.Data.MarshalBinary(); err != nil {
+		return
+	}
 	data = append(data, b...)
 	return
 }
 
 func (p *PacketIn) UnmarshalBinary(data []byte) error {
-	err := p.Header.UnmarshalBinary(data)
+	if err := p.Header.UnmarshalBinary(data); err != nil {
+		return err
+	}
 	n := p.Header.Len()
 
 	p.BufferId = binary.BigEndian.Uint32(data[n:])
@@ -369,8 +384,7 @@ func (p *PacketIn) UnmarshalBinary(data []byte) error {
 	copy(p.pad, data[n:])
 	n += 2
 
-	err = p.Data.UnmarshalBinary(data[n:])
-	return err
+	return p.Data.UnmarshalBinary(data[n:])
 }
 
 // ofp_packet_in_reason 1.3
@@ -418,11 +432,13 @@ func (c *SwitchConfig) Len() (n uint16) {
 
 func (c *SwitchConfig) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, int(c.Len()))
-	bytes := make([]byte, 0)
+	var bytes []byte
 	next := 0
 
 	c.Header.Length = c.Len()
-	bytes, err = c.Header.MarshalBinary()
+	if bytes, err = c.Header.MarshalBinary(); err != nil {
+		return
+	}
 	copy(data[next:], bytes)
 	next += len(bytes)
 	binary.BigEndian.PutUint16(data[next:], c.Flags)
@@ -470,16 +486,21 @@ func (e *ErrorMsg) Len() (n uint16) {
 
 func (e *ErrorMsg) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, int(e.Len()))
+	var bytes []byte
 	next := 0
 
-	bytes, err := e.Header.MarshalBinary()
+	if bytes, err = e.Header.MarshalBinary(); err != nil {
+		return
+	}
 	copy(data[next:], bytes)
 	next += len(bytes)
 	binary.BigEndian.PutUint16(data[next:], e.Type)
 	next += 2
 	binary.BigEndian.PutUint16(data[next:], e.Code)
 	next += 2
-	bytes, err = e.Data.MarshalBinary()
+	if bytes, err = e.Data.MarshalBinary(); err != nil {
+		return
+	}
 	copy(data[next:], bytes)
 	next += len(bytes)
 	return
@@ -690,11 +711,13 @@ func (s *SwitchFeatures) Len() (n uint16) {
 
 func (s *SwitchFeatures) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, int(s.Len()))
-	bytes := make([]byte, 0)
+	var bytes []byte
 	next := 0
 
 	s.Header.Length = s.Len()
-	bytes, err = s.Header.MarshalBinary()
+	if bytes, err = s.Header.MarshalBinary(); err != nil {
+		return
+	}
 	copy(data[next:], bytes)
 	next += len(bytes)
 	binary.BigEndian.PutUint32(data[next:], s.Buffers)
@@ -711,8 +734,7 @@ func (s *SwitchFeatures) MarshalBinary() (data []byte, err error) {
 	next += 4
 
 	for _, p := range s.Ports {
-		bytes, err = p.MarshalBinary()
-		if err != nil {
+		if bytes, err = p.MarshalBinary(); err != nil {
 			return
 		}
 		copy(data[next:], bytes)

@@ -405,7 +405,9 @@ func (a *NXActionRegLoad) MarshalBinary() (data []byte, err error) {
 func (a *NXActionRegLoad) UnmarshalBinary(data []byte) error {
 	n := 0
 	a.NXActionHeader = new(NXActionHeader)
-	err := a.NXActionHeader.UnmarshalBinary(data[n:])
+	if err := a.NXActionHeader.UnmarshalBinary(data[n:]); err != nil {
+		return err
+	}
 	n += int(a.NXActionHeader.Len())
 	if len(data) < int(a.Len()) {
 		return errors.New("the []byte is too short to unmarshal a full NXActionRegLoad message")
@@ -413,10 +415,12 @@ func (a *NXActionRegLoad) UnmarshalBinary(data []byte) error {
 	a.OfsNbits = binary.BigEndian.Uint16(data[n:])
 	n += 2
 	a.DstReg = new(MatchField)
-	err = a.DstReg.UnmarshalHeader(data[n : n+4])
+	if err := a.DstReg.UnmarshalHeader(data[n : n+4]); err != nil {
+		return err
+	}
 	n += 4
 	a.Value = binary.BigEndian.Uint64(data[n:])
-	return err
+	return nil
 }
 
 // NXActionRegMove is NX action to move data from srcField to dstField.
@@ -473,7 +477,9 @@ func (a *NXActionRegMove) MarshalBinary() (data []byte, err error) {
 func (a *NXActionRegMove) UnmarshalBinary(data []byte) error {
 	n := 0
 	a.NXActionHeader = new(NXActionHeader)
-	err := a.NXActionHeader.UnmarshalBinary(data[n:])
+	if err := a.NXActionHeader.UnmarshalBinary(data[n:]); err != nil {
+		return err
+	}
 	n += int(a.NXActionHeader.Len())
 	if len(data) < int(a.Length) {
 		return errors.New("the []byte is too short to unmarshal a full NXActionRegMove message")
@@ -485,11 +491,12 @@ func (a *NXActionRegMove) UnmarshalBinary(data []byte) error {
 	a.DstOfs = binary.BigEndian.Uint16(data[n:])
 	n += 2
 	a.SrcField = new(MatchField)
-	err = a.SrcField.UnmarshalHeader(data[n:])
+	if err := a.SrcField.UnmarshalHeader(data[n:]); err != nil {
+		return err
+	}
 	n += 4
 	a.DstField = new(MatchField)
-	err = a.DstField.UnmarshalHeader(data[n:])
-	return err
+	return a.DstField.UnmarshalHeader(data[n:])
 }
 
 // NXActionResubmit is NX action to resubmit packet to a specified in_port.
@@ -669,10 +676,12 @@ func (a *NXActionCTNAT) Len() (n uint16) {
 
 func (a *NXActionCTNAT) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, a.Len())
-	b := make([]byte, a.NXActionHeader.Len())
+	var b []byte
 	n := 0
 
-	b, err = a.NXActionHeader.MarshalBinary()
+	if b, err = a.NXActionHeader.MarshalBinary(); err != nil {
+		return
+	}
 	copy(data[n:], b)
 	n += len(b)
 	// Skip padding bytes
@@ -861,7 +870,9 @@ func (a *NXActionOutputReg) MarshalBinary() (data []byte, err error) {
 func (a *NXActionOutputReg) UnmarshalBinary(data []byte) error {
 	n := 0
 	a.NXActionHeader = new(NXActionHeader)
-	err := a.NXActionHeader.UnmarshalBinary(data[n:])
+	if err := a.NXActionHeader.UnmarshalBinary(data[n:]); err != nil {
+		return err
+	}
 	n += int(a.NXActionHeader.Len())
 	if len(data) < int(a.Len()) {
 		return errors.New("the []byte is too short to unmarshal a full NXActionOutputReg message")
@@ -869,10 +880,12 @@ func (a *NXActionOutputReg) UnmarshalBinary(data []byte) error {
 	a.OfsNbits = binary.BigEndian.Uint16(data[n:])
 	n += 2
 	a.SrcField = new(MatchField)
-	err = a.SrcField.UnmarshalHeader(data[n : n+4])
+	if err := a.SrcField.UnmarshalHeader(data[n : n+4]); err != nil {
+		return err
+	}
 	n += 4
 	a.MaxLen = binary.BigEndian.Uint16(data[n:])
-	return err
+	return nil
 }
 
 func newNXActionOutputReg() *NXActionOutputReg {
@@ -1369,7 +1382,9 @@ func (a *NXActionRegLoad2) MarshalBinary() (data []byte, err error) {
 	var b []byte
 	n := 0
 	a.Length = a.Len()
-	b, err = a.NXActionHeader.MarshalBinary()
+	if b, err = a.NXActionHeader.MarshalBinary(); err != nil {
+		return
+	}
 	copy(data[n:], b)
 	n += len(b)
 	fieldData, err := a.DstField.MarshalBinary()
@@ -1384,17 +1399,15 @@ func (a *NXActionRegLoad2) MarshalBinary() (data []byte, err error) {
 func (a *NXActionRegLoad2) UnmarshalBinary(data []byte) error {
 	n := 0
 	a.NXActionHeader = new(NXActionHeader)
-	err := a.NXActionHeader.UnmarshalBinary(data[n:])
+	if err := a.NXActionHeader.UnmarshalBinary(data[n:]); err != nil {
+		return err
+	}
 	n += int(a.NXActionHeader.Len())
 	if len(data) < int(a.Length) {
 		return errors.New("the []byte is too short to unmarshal a full NXActionRegLoad2 message")
 	}
 	a.DstField = new(MatchField)
-	err = a.DstField.UnmarshalBinary(data[n:])
-	if err != nil {
-		return err
-	}
-	return nil
+	return a.DstField.UnmarshalBinary(data[n:])
 }
 
 // NXActionController is NX action to output packet to the Controller set with a specified ID.

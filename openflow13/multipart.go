@@ -24,7 +24,9 @@ func (s *MultipartRequest) Len() (n uint16) {
 
 func (s *MultipartRequest) MarshalBinary() (data []byte, err error) {
 	s.Header.Length = s.Len()
-	data, err = s.Header.MarshalBinary()
+	if data, err = s.Header.MarshalBinary(); err != nil {
+		return
+	}
 
 	b := make([]byte, 8)
 	n := 0
@@ -35,7 +37,9 @@ func (s *MultipartRequest) MarshalBinary() (data []byte, err error) {
 	n += 4 // for padding
 	data = append(data, b...)
 
-	b, err = s.Body.MarshalBinary()
+	if b, err = s.Body.MarshalBinary(); err != nil {
+		return
+	}
 	data = append(data, b...)
 
 	log.Debugf("Sending MultipartRequest (%d): %v", len(data), data)
@@ -931,7 +935,9 @@ func (p *PortStatus) Len() (n uint16) {
 
 func (s *PortStatus) MarshalBinary() (data []byte, err error) {
 	s.Header.Length = s.Len()
-	data, err = s.Header.MarshalBinary()
+	if data, err = s.Header.MarshalBinary(); err != nil {
+		return
+	}
 
 	b := make([]byte, 8)
 	n := 0
@@ -940,13 +946,17 @@ func (s *PortStatus) MarshalBinary() (data []byte, err error) {
 	copy(b[n:], s.pad)
 	data = append(data, b...)
 
-	b, err = s.Desc.MarshalBinary()
+	if b, err = s.Desc.MarshalBinary(); err != nil {
+		return
+	}
 	data = append(data, b...)
 	return
 }
 
 func (s *PortStatus) UnmarshalBinary(data []byte) error {
-	err := s.Header.UnmarshalBinary(data)
+	if err := s.Header.UnmarshalBinary(data); err != nil {
+		return err
+	}
 	n := int(s.Header.Len())
 
 	s.Reason = data[n]
@@ -954,8 +964,7 @@ func (s *PortStatus) UnmarshalBinary(data []byte) error {
 	copy(s.pad, data[n:])
 	n += len(s.pad)
 
-	err = s.Desc.UnmarshalBinary(data[n:])
-	return err
+	return s.Desc.UnmarshalBinary(data[n:])
 }
 
 // ofp_port_reason 1.0

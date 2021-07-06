@@ -1,0 +1,44 @@
+name: Go
+on:
+  pull_request:
+    branches:
+    - main
+  push:
+    branches:
+    - main
+
+jobs:
+  test:
+    runs-on: [ubuntu-latest]
+    steps:
+    - name: Set up Go 1.15
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.15
+    - name: Check-out code
+      uses: actions/checkout@v2
+    - name: Run unit tests
+      run: |
+        make test
+
+  tidy:
+    runs-on: [ubuntu-latest]
+    steps:
+    - name: Set up Go 1.15
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.15
+    - name: Check-out code
+      uses: actions/checkout@v2
+    - name: Check tidiness
+      run: |
+        ./ci/check-tidy.sh
+
+  golangci:
+    runs-on: [ubuntu-latest]
+    steps:
+    - name: Check-out code
+      uses: actions/checkout@v2
+    - name: Run code linters
+      run: |
+        make golangci

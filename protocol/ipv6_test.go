@@ -292,10 +292,10 @@ func testIPv6Equals(oriMessage, newMessage *IPv6) error {
 	if oriMessage.HopLimit != newMessage.HopLimit {
 		return fmt.Errorf("IPv6 HotLimit not equal")
 	}
-	if !bytes.Equal(oriMessage.NWSrc, newMessage.NWSrc) {
+	if !oriMessage.NWSrc.Equal(newMessage.NWSrc) {
 		return fmt.Errorf("IPv6 NWSrc not equal")
 	}
-	if !bytes.Equal(oriMessage.NWDst, newMessage.NWDst) {
+	if !oriMessage.NWDst.Equal(newMessage.NWDst) {
 		return fmt.Errorf("IPv6 NWDst not equal")
 	}
 	oriData, err := oriMessage.Data.MarshalBinary()

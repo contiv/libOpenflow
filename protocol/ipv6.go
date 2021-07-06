@@ -46,7 +46,7 @@ func (i *IPv6) Len() (n uint16) {
 
 func (i *IPv6) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, int(i.Len()))
-	b := make([]byte, 0)
+	var b []byte
 	n := 0
 
 	ihl := (i.Version << 4) | (i.TrafficClass>>4)&0x0f
@@ -97,8 +97,7 @@ func (i *IPv6) MarshalBinary() (data []byte, err error) {
 	}
 
 	if i.Data != nil {
-		b, err = i.Data.MarshalBinary()
-		if err != nil {
+		if b, err = i.Data.MarshalBinary(); err != nil {
 			return
 		}
 		copy(data[n:], b)

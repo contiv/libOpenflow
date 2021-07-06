@@ -52,7 +52,7 @@ func (i *IPv4) Len() (n uint16) {
 
 func (i *IPv4) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, int(i.Len()))
-	b := make([]byte, 0)
+	var b []byte
 	n := 0
 
 	var ihl uint8 = (i.Version << 4) + i.IHL
@@ -80,7 +80,9 @@ func (i *IPv4) MarshalBinary() (data []byte, err error) {
 	copy(data[n:], i.NWDst.To4())
 	n += 4 // Underlying rep can be 16 bytes.
 
-	b, err = i.Options.MarshalBinary()
+	if b, err = i.Options.MarshalBinary(); err != nil {
+		return
+	}
 	copy(data[n:], b)
 	n += len(b)
 
