@@ -1,4 +1,4 @@
-module antrea-io/libOpenflow
+module antrea.io/libOpenflow
 
 go 1.15
 

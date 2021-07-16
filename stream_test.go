@@ -9,9 +9,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"antrea-io/libOpenflow/common"
-	"antrea-io/libOpenflow/openflow13"
-	"antrea-io/libOpenflow/util"
+	"antrea.io/libOpenflow/common"
+	"antrea.io/libOpenflow/openflow13"
+	"antrea.io/libOpenflow/util"
 )
 
 var helloMessage *common.Hello

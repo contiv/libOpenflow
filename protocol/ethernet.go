@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net"
 
-	"antrea-io/libOpenflow/util"
+	"antrea.io/libOpenflow/util"
 )
 
 // see http://en.wikipedia.org/wiki/EtherType

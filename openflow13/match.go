@@ -7,7 +7,7 @@ import (
 	"log"
 	"net"
 
-	"antrea-io/libOpenflow/util"
+	"antrea.io/libOpenflow/util"
 )
 
 // ofp_match 1.3

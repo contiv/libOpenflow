@@ -5,8 +5,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"antrea-io/libOpenflow/common"
-	"antrea-io/libOpenflow/util"
+	"antrea.io/libOpenflow/common"
+	"antrea.io/libOpenflow/util"
 )
 
 // ofp_multipart_request 1.3

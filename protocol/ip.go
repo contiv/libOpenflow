@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net"
 
-	"antrea-io/libOpenflow/util"
+	"antrea.io/libOpenflow/util"
 )
 
 const (

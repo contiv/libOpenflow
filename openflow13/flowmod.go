@@ -5,7 +5,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"antrea-io/libOpenflow/common"
+	"antrea.io/libOpenflow/common"
 )
 
 // ofp_flow_mod     1.3

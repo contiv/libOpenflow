@@ -7,7 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"antrea-io/libOpenflow/common"
+	"antrea.io/libOpenflow/common"
 )
 
 const (

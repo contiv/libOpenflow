@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 
-	"antrea-io/libOpenflow/util"
+	"antrea.io/libOpenflow/util"
 )
 
 // Nicira extension messages.
