@@ -270,7 +270,8 @@ func (p *PacketOut) UnmarshalBinary(data []byte) error {
 
 	n += 6 // for pad
 
-	for n < (n + p.ActionsLen) {
+	actionsBound := n + p.ActionsLen
+	for n < actionsBound {
 		a, err := DecodeAction(data[n:])
 		if err != nil {
 			return err
@@ -745,6 +746,7 @@ func (s *SwitchFeatures) UnmarshalBinary(data []byte) error {
 	for next < len(data) {
 		p := NewPhyPort()
 		err = p.UnmarshalBinary(data[next:])
+		s.Ports = append(s.Ports, *p)
 		next += int(p.Len())
 	}
 	return err
