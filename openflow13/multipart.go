@@ -668,9 +668,9 @@ func (s *TableStats) UnmarshalBinary(data []byte) error {
 	s.TableId = data[0]
 	n += 1
 	copy(s.pad, data[n:])
-	n += len(s.pad)
+	n += 3
 	copy(s.Name, data[n:])
-	n += len(s.Name)
+	n += MAX_TABLE_NAME_LEN
 	s.Wildcards = binary.BigEndian.Uint32(data[n:])
 	n += 4
 	s.MaxEntries = binary.BigEndian.Uint32(data[n:])
@@ -790,7 +790,7 @@ func (s *PortStats) UnmarshalBinary(data []byte) error {
 	s.PortNo = binary.BigEndian.Uint16(data[n:])
 	n += 2
 	copy(s.pad, data[n:])
-	n += len(s.pad)
+	n += 6
 	s.RxPackets = binary.BigEndian.Uint64(data[n:])
 	n += 8
 	s.TxPackets = binary.BigEndian.Uint64(data[n:])
@@ -895,7 +895,7 @@ func (s *QueueStats) UnmarshalBinary(data []byte) error {
 	s.PortNo = binary.BigEndian.Uint16(data[n:])
 	n += 2
 	copy(s.pad, data[n:])
-	n += len(s.pad)
+	n += 2
 	s.QueueId = binary.BigEndian.Uint32(data[n:])
 	n += 4
 	s.TxBytes = binary.BigEndian.Uint64(data[n:])
@@ -952,7 +952,7 @@ func (s *PortStatus) UnmarshalBinary(data []byte) error {
 	s.Reason = data[n]
 	n += 1
 	copy(s.pad, data[n:])
-	n += len(s.pad)
+	n += 7
 
 	err = s.Desc.UnmarshalBinary(data[n:])
 	return err
