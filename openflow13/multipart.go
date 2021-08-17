@@ -2,6 +2,7 @@ package openflow13
 
 import (
 	"encoding/binary"
+	"fmt"
 
 	log "github.com/sirupsen/logrus"
 
@@ -15,11 +16,15 @@ type MultipartRequest struct {
 	Type  uint16
 	Flags uint16
 	pad   []byte // 4 bytes
-	Body  util.Message
+	Body  []util.Message
 }
 
 func (s *MultipartRequest) Len() (n uint16) {
-	return s.Header.Len() + 8 + s.Body.Len()
+	n = s.Header.Len() + 8
+	for _, body := range s.Body {
+		n += body.Len()
+	}
+	return
 }
 
 func (s *MultipartRequest) MarshalBinary() (data []byte, err error) {
@@ -37,10 +42,13 @@ func (s *MultipartRequest) MarshalBinary() (data []byte, err error) {
 	n += 4 // for padding
 	data = append(data, b...)
 
-	if b, err = s.Body.MarshalBinary(); err != nil {
-		return
+	for _, body := range s.Body {
+		b, err = body.MarshalBinary()
+		if err != nil {
+			return
+		}
+		data = append(data, b...)
 	}
-	data = append(data, b...)
 
 	log.Debugf("Sending MultipartRequest (%d): %v", len(data), data)
 
@@ -57,28 +65,41 @@ func (s *MultipartRequest) UnmarshalBinary(data []byte) error {
 	n += 2
 	n += 4 // for padding
 
-	var req util.Message
-	switch s.Type {
-	case MultipartType_Aggregate:
-		req = s.Body.(*AggregateStatsRequest)
+	for n < s.Header.Length {
+		var req util.Message
+		switch s.Type {
+		case MultipartType_Aggregate:
+			req = new(AggregateStatsRequest)
+			err = req.UnmarshalBinary(data[n:])
+		case MultipartType_Desc:
+		case MultipartType_Flow:
+			req = new(FlowStatsRequest)
+			err = req.UnmarshalBinary(data[n:])
+		case MultipartType_Port:
+			req = new(PortStatsRequest)
+			err = req.UnmarshalBinary(data[n:])
+		case MultipartType_Table:
+		case MultipartType_Queue:
+			req = new(QueueStatsRequest)
+			err = req.UnmarshalBinary(data[n:])
+		case MultipartType_Experimenter:
+		case MultipartType_TableFeatures:
+			req = new(OFPTableFeatures)
+		}
+		if err != nil {
+			return err
+		}
+		if req == nil {
+			return fmt.Errorf("unsupported MultipartRequest type: %d", s.Type)
+		}
 		err = req.UnmarshalBinary(data[n:])
-	case MultipartType_Desc:
-		break
-	case MultipartType_Flow:
-		req = s.Body.(*FlowStatsRequest)
-		err = req.UnmarshalBinary(data[n:])
-	case MultipartType_Port:
-		req = s.Body.(*PortStatsRequest)
-		err = req.UnmarshalBinary(data[n:])
-	case MultipartType_Table:
-		break
-	case MultipartType_Queue:
-		req = s.Body.(*QueueStatsRequest)
-		err = req.UnmarshalBinary(data[n:])
-	case MultipartType_Experimenter:
-		break
+		if err != nil {
+			return err
+		}
+		n += req.Len()
+		s.Body = append(s.Body, req)
 	}
-	return err
+	return nil
 }
 
 // ofp_multipart_reply 1.3
@@ -148,6 +169,8 @@ func (s *MultipartReply) UnmarshalBinary(data []byte) error {
 		// FIXME: Support all types
 		case MultipartType_Experimenter:
 			break
+		case MultipartType_TableFeatures:
+			repl = new(OFPTableFeatures)
 		}
 
 		err = repl.UnmarshalBinary(data[n:])
@@ -973,3 +996,457 @@ const (
 	PR_DELETE
 	PR_MODIFY
 )
+
+const (
+	OFPTFPT13_INSTRUCTIONS        = 0      // Instructions property.
+	OFPTFPT13_INSTRUCTIONS_MISS   = 1      // Instructions for table-miss.
+	OFPTFPT13_NEXT_TABLES         = 2      // Next Table property.
+	OFPTFPT13_NEXT_TABLES_MISS    = 3      // Next Table for table-miss.
+	OFPTFPT13_WRITE_ACTIONS       = 4      // Write Actions property.
+	OFPTFPT13_WRITE_ACTIONS_MISS  = 5      // Write Actions for table-miss.
+	OFPTFPT13_APPLY_ACTIONS       = 6      // Apply Actions property.
+	OFPTFPT13_APPLY_ACTIONS_MISS  = 7      // Apply Actions for table-miss
+	OFPTFPT13_MATCH               = 8      // Match property.
+	OFPTFPT13_WILDCARDS           = 10     // Wildcards property.
+	OFPTFPT13_WRITE_SETFIELD      = 12     // Write Set-Field property.
+	OFPTFPT13_WRITE_SETFIELD_MISS = 13     // Write Set-Field for table-miss.
+	OFPTFPT13_APPLY_SETFIELD      = 14     // Apply Set-Field property.
+	OFPTFPT13_APPLY_SETFIELD_MISS = 15     // Apply Set-Field for table-miss.
+	OFPTFPT13_EXPERIMENTER        = 0xfffe // EXPERIMENTER PROPERTY.
+	OFPTFPT13_EXPERIMENTER_MISS   = 0xffff // EXPERIMENTER FOR TABLE-MISS.
+)
+
+type OFTablePropertyHeader struct {
+	Type   uint16
+	Length uint16
+}
+
+func (h *OFTablePropertyHeader) Len() uint16 {
+	return 4
+}
+
+func (h *OFTablePropertyHeader) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, h.Len())
+	n := 0
+	binary.BigEndian.PutUint16(data[n:], h.Type)
+	n += 2
+	binary.BigEndian.PutUint16(data[n:], h.Length)
+	return
+}
+
+func (h *OFTablePropertyHeader) UnmarshalBinary(data []byte) error {
+	if len(data) < int(h.Len()) {
+		return fmt.Errorf("the []byte is too short to unmarshal a full OFTablePropertyHeader message")
+	}
+	n := 0
+	h.Type = binary.BigEndian.Uint16(data[n:])
+	n += 2
+	h.Length = binary.BigEndian.Uint16(data[n:])
+	return nil
+}
+
+type InstructionProperty struct {
+	OFTablePropertyHeader
+	Instructions []InstrHeader
+}
+
+func (p *InstructionProperty) Len() uint16 {
+	n := p.OFTablePropertyHeader.Len()
+	for _, instr := range p.Instructions {
+		n += instr.Len()
+	}
+	return (n + 7) / 8 * 8
+}
+
+func (p *InstructionProperty) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, p.Len())
+	n := 0
+	header, err := p.OFTablePropertyHeader.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	copy(data[n:], header)
+	n += 4
+	for _, instr := range p.Instructions {
+		b, err := instr.MarshalBinary()
+		if err != nil {
+			return nil, err
+		}
+		copy(data[n:], b)
+		n += int(instr.Len())
+	}
+	return data, nil
+}
+
+func (p *InstructionProperty) UnmarshalBinary(data []byte) error {
+	if len(data) < 4 {
+		return fmt.Errorf("the []byte is too short to unmarshal OFTablePropertyHeader message")
+	}
+	n := 0
+	header := new(OFTablePropertyHeader)
+	err := p.OFTablePropertyHeader.UnmarshalBinary(data[n:])
+	p.OFTablePropertyHeader = *header
+	if err != nil {
+		return err
+	}
+	if len(data) < int(p.Length) {
+		return fmt.Errorf("the []byte is too short to unmarshal a full InstructionProperty message")
+	}
+	n += 4
+	p.Instructions = make([]InstrHeader, 0)
+	for n < int(p.Length) {
+		instr := new(InstrHeader)
+		err := instr.UnmarshalBinary(data[n : n+4])
+		if err != nil {
+			return err
+		}
+		p.Instructions = append(p.Instructions, *instr)
+		n += int(instr.Len())
+	}
+	return nil
+}
+
+type NextTableProperty struct {
+	OFTablePropertyHeader
+	TableIDs []uint8
+}
+
+func (p *NextTableProperty) Len() uint16 {
+	return (p.OFTablePropertyHeader.Len() + uint16(len(p.TableIDs)) + 7) / 8 * 8
+}
+
+func (p *NextTableProperty) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, p.Len())
+	n := 0
+	header, err := p.OFTablePropertyHeader.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	copy(data[n:], header)
+	n += 4
+	for _, t := range p.TableIDs {
+		data[n] = t
+		n += 1
+	}
+	return
+}
+
+func (p *NextTableProperty) UnmarshalBinary(data []byte) error {
+	if len(data) < 4 {
+		return fmt.Errorf("the []byte is too short to unmarshal OFTablePropertyHeader message")
+	}
+	n := 0
+	header := new(OFTablePropertyHeader)
+	err := p.OFTablePropertyHeader.UnmarshalBinary(data[n:])
+	if err != nil {
+		return err
+	}
+	p.OFTablePropertyHeader = *header
+	if len(data) < int(p.Length) {
+		return fmt.Errorf("the []byte is too short to unmarshal a full NextTableProperty message")
+	}
+	n += 4
+	p.TableIDs = make([]uint8, 0)
+	for n < int(p.Length) {
+		p.TableIDs = append(p.TableIDs, data[n])
+		n += 1
+	}
+	return nil
+}
+
+type ActionProperty struct {
+	OFTablePropertyHeader
+	Actions []ActionHeader
+}
+
+func (p *ActionProperty) Len() uint16 {
+	n := p.OFTablePropertyHeader.Len()
+	for _, act := range p.Actions {
+		n += act.Len()
+	}
+	return uint16(n+7) / 8 * 8
+}
+
+func (p *ActionProperty) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, p.Len())
+	n := 0
+	header, err := p.OFTablePropertyHeader.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	copy(data[n:], header)
+	n += 4
+	for _, act := range p.Actions {
+		b, err := act.MarshalBinary()
+		if err != nil {
+			return nil, err
+		}
+		copy(data[n:], b)
+		n += int(act.Len())
+	}
+	return data, nil
+}
+
+func (p *ActionProperty) UnmarshalBinary(data []byte) error {
+	if len(data) < 4 {
+		return fmt.Errorf("the []byte is too short to unmarshal OFTablePropertyHeader message")
+	}
+	n := 0
+	header := new(OFTablePropertyHeader)
+	err := p.OFTablePropertyHeader.UnmarshalBinary(data[n:])
+	if err != nil {
+		return err
+	}
+	p.OFTablePropertyHeader = *header
+	if len(data) < int(p.Length) {
+		return fmt.Errorf("the []byte is too short to unmarshal a full ActionProperty message")
+	}
+	n += 4
+	p.Actions = make([]ActionHeader, 0)
+	for n < int(p.Length) {
+		act := new(ActionHeader)
+		err := act.UnmarshalBinary(data[n:])
+		if err != nil {
+			return err
+		}
+		p.Actions = append(p.Actions, *act)
+		n += int(act.Len())
+	}
+	return nil
+}
+
+type SetFieldProperty struct {
+	OFTablePropertyHeader
+	IDs []uint32
+}
+
+func (p *SetFieldProperty) Len() uint16 {
+	n := p.OFTablePropertyHeader.Len()
+	n += 4 * uint16(len(p.IDs))
+	return uint16(n+7) / 8 * 8
+}
+
+func (p *SetFieldProperty) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, p.Len())
+	n := 0
+	header, err := p.OFTablePropertyHeader.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	copy(data[n:], header)
+	n += 4
+	for _, oid := range p.IDs {
+		binary.BigEndian.PutUint32(data[n:], oid)
+		n += 4
+	}
+	return data, nil
+}
+
+func (p *SetFieldProperty) UnmarshalBinary(data []byte) error {
+	if len(data) < 4 {
+		return fmt.Errorf("the []byte is too short to unmarshal OFTablePropertyHeader message")
+	}
+	n := 0
+	header := new(OFTablePropertyHeader)
+	err := p.OFTablePropertyHeader.UnmarshalBinary(data[n:])
+	if err != nil {
+		return err
+	}
+	p.OFTablePropertyHeader = *header
+	if len(data) < int(p.Length) {
+		return fmt.Errorf("the []byte is too short to unmarshal a full SetFieldProperty message")
+	}
+	n += 4
+	p.IDs = make([]uint32, 0)
+	for n < int(p.Length) {
+		p.IDs = append(p.IDs, binary.BigEndian.Uint32(data[n:]))
+		n += 4
+	}
+	return nil
+}
+
+type TableExperimenterProperty struct {
+	OFTablePropertyHeader
+	Experimenter     uint32
+	ExperimenterType uint32
+	ExperimenterData []uint32
+}
+
+func (p *TableExperimenterProperty) Len() uint16 {
+	return p.OFTablePropertyHeader.Len() + 8 + uint16(4*len(p.ExperimenterData)+7)/8*8
+}
+
+func (p *TableExperimenterProperty) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, p.Len())
+	n := 0
+	header, err := p.OFTablePropertyHeader.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	copy(data[n:], header)
+	n += 4
+	binary.BigEndian.PutUint32(data[n:], p.Experimenter)
+	n += 4
+	binary.BigEndian.PutUint32(data[n:], p.ExperimenterType)
+	n += 4
+	for _, d := range p.ExperimenterData {
+		binary.BigEndian.PutUint32(data[n:], d)
+		n += 4
+	}
+	return data, nil
+}
+
+func (p *TableExperimenterProperty) UnmarshalBinary(data []byte) error {
+	if len(data) < 4 {
+		return fmt.Errorf("the []byte is too short to unmarshal OFTablePropertyHeader message")
+	}
+	n := 0
+	header := new(OFTablePropertyHeader)
+	err := header.UnmarshalBinary(data[n:])
+	if err != nil {
+		return err
+	}
+	p.OFTablePropertyHeader = *header
+	if len(data) < int(p.Length) {
+		return fmt.Errorf("the []byte is too short to unmarshal a full TableExperimenterProperty message")
+	}
+	n += 4
+	p.Experimenter = binary.BigEndian.Uint32(data[n:])
+	n += 4
+	p.ExperimenterType = binary.BigEndian.Uint32(data[n:])
+	n += 4
+	p.ExperimenterData = make([]uint32, 0)
+	for n < int(p.Length) {
+		p.ExperimenterData = append(p.ExperimenterData, binary.BigEndian.Uint32(data[n:]))
+		n += 4
+	}
+	return nil
+}
+
+// ofp13_table_features
+type OFPTableFeatures struct {
+	Length        uint16
+	TableID       uint8
+	Command       uint8
+	pad           [4]uint8
+	Name          [32]byte
+	MetadataMatch uint64
+	MetadataWrite uint64
+	Capabilities  uint32
+	MaxEntries    uint32
+	Properties    []util.Message
+}
+
+func (f *OFPTableFeatures) Len() uint16 {
+	n := uint16(64)
+	for _, p := range f.Properties {
+		n += p.Len()
+	}
+	return n
+}
+
+func (f *OFPTableFeatures) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, f.Length)
+	n := 0
+	binary.BigEndian.PutUint16(data[n:], f.Length)
+	n += 2
+	data[n] = f.TableID
+	n += 1
+	data[n] = f.Command
+	n += 1
+	n += 4
+	copy(data[n:], f.Name[:32])
+	n += 32
+	binary.BigEndian.PutUint64(data[n:], f.MetadataMatch)
+	n += 8
+	binary.BigEndian.PutUint64(data[n:], f.MetadataWrite)
+	n += 8
+	binary.BigEndian.PutUint32(data[n:], f.Capabilities)
+	n += 4
+	binary.BigEndian.PutUint32(data[n:], f.MaxEntries)
+	n += 4
+	for _, p := range f.Properties {
+		pd, err := p.MarshalBinary()
+		if err != nil {
+			return nil, err
+		}
+		copy(data[n:], pd)
+		n += int(p.Len())
+	}
+	return
+}
+
+func (f *OFPTableFeatures) UnmarshalBinary(data []byte) error {
+	if len(data) < 2 {
+		return fmt.Errorf("the []byte is too short to unmarshal OFPTableFeatures message Length")
+	}
+	n := 0
+	f.Length = binary.BigEndian.Uint16(data[n:])
+	if len(data) < int(f.Length) {
+		return fmt.Errorf("the []byte is too short to unmarshal a full OFPTableFeatures message")
+	}
+	n += 2
+	f.TableID = data[n]
+	n += 1
+	f.Command = data[n]
+	n += 1
+	n += 4
+	b := [32]byte{}
+	copy(b[0:], data[n:n+32])
+	f.Name = b
+	n += 32
+	f.MetadataMatch = binary.BigEndian.Uint64(data[n:])
+	n += 8
+	f.MetadataWrite = binary.BigEndian.Uint64(data[n:])
+	n += 8
+	f.Capabilities = binary.BigEndian.Uint32(data[n:])
+	n += 4
+	f.MaxEntries = binary.BigEndian.Uint32(data[n:])
+	n += 4
+	f.Properties = make([]util.Message, 0)
+	for n < int(f.Length) {
+		t := binary.BigEndian.Uint16(data[n:])
+		var p util.Message
+		switch t {
+		case OFPTFPT13_INSTRUCTIONS:
+			fallthrough
+		case OFPTFPT13_INSTRUCTIONS_MISS:
+			p = new(InstructionProperty)
+		case OFPTFPT13_NEXT_TABLES:
+			fallthrough
+		case OFPTFPT13_NEXT_TABLES_MISS:
+			p = new(NextTableProperty)
+		case OFPTFPT13_APPLY_ACTIONS:
+			fallthrough
+		case OFPTFPT13_APPLY_ACTIONS_MISS:
+			fallthrough
+		case OFPTFPT13_WRITE_ACTIONS:
+			fallthrough
+		case OFPTFPT13_WRITE_ACTIONS_MISS:
+			p = new(ActionProperty)
+		case OFPTFPT13_MATCH:
+			fallthrough
+		case OFPTFPT13_WILDCARDS:
+			fallthrough
+		case OFPTFPT13_WRITE_SETFIELD:
+			fallthrough
+		case OFPTFPT13_WRITE_SETFIELD_MISS:
+			fallthrough
+		case OFPTFPT13_APPLY_SETFIELD:
+			fallthrough
+		case OFPTFPT13_APPLY_SETFIELD_MISS:
+			p = new(SetFieldProperty)
+		case OFPTFPT13_EXPERIMENTER:
+			fallthrough
+		case OFPTFPT13_EXPERIMENTER_MISS:
+			p = new(TableExperimenterProperty)
+		}
+		err := p.UnmarshalBinary(data[n:])
+		if err != nil {
+			return err
+		}
+		f.Properties = append(f.Properties, p)
+		n += int(p.Len())
+	}
+	return nil
+}
