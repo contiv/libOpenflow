@@ -1084,7 +1084,7 @@ func (p *InstructionProperty) UnmarshalBinary(data []byte) error {
 	}
 	n := 0
 	header := new(OFTablePropertyHeader)
-	err := p.OFTablePropertyHeader.UnmarshalBinary(data[n:])
+	err := header.UnmarshalBinary(data[n:])
 	p.OFTablePropertyHeader = *header
 	if err != nil {
 		return err
@@ -1137,7 +1137,7 @@ func (p *NextTableProperty) UnmarshalBinary(data []byte) error {
 	}
 	n := 0
 	header := new(OFTablePropertyHeader)
-	err := p.OFTablePropertyHeader.UnmarshalBinary(data[n:])
+	err := header.UnmarshalBinary(data[n:])
 	if err != nil {
 		return err
 	}
@@ -1193,7 +1193,7 @@ func (p *ActionProperty) UnmarshalBinary(data []byte) error {
 	}
 	n := 0
 	header := new(OFTablePropertyHeader)
-	err := p.OFTablePropertyHeader.UnmarshalBinary(data[n:])
+	err := header.UnmarshalBinary(data[n:])
 	if err != nil {
 		return err
 	}
@@ -1248,7 +1248,7 @@ func (p *SetFieldProperty) UnmarshalBinary(data []byte) error {
 	}
 	n := 0
 	header := new(OFTablePropertyHeader)
-	err := p.OFTablePropertyHeader.UnmarshalBinary(data[n:])
+	err := header.UnmarshalBinary(data[n:])
 	if err != nil {
 		return err
 	}
