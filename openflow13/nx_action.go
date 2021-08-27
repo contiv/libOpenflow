@@ -166,6 +166,7 @@ func DecodeNxAction(data []byte) Action {
 	case NXAST_NAT:
 		a = new(NXActionCTNAT)
 	case NXAST_CONTROLLER2:
+		a = new(NXActionController2)
 	case NXAST_SAMPLE2:
 	case NXAST_OUTPUT_TRUNC:
 	case NXAST_CT_CLEAR:
@@ -1469,5 +1470,454 @@ func NewNXActionController(controllerID uint16) *NXActionController {
 	a.NXActionHeader = NewNxActionHeader(NXAST_CONTROLLER)
 	a.ControllerID = controllerID
 	a.Length = a.NXActionHeader.Len() + 6
+	return a
+}
+
+const (
+	NXAC2PT_MAX_LEN       = iota /* ovs_be16 max bytes to send (default all). */
+	NXAC2PT_CONTROLLER_ID        /* ovs_be16 dest controller ID (default 0). */
+	NXAC2PT_REASON               /* uint8_t reason (OFPR_*), default 0. */
+	NXAC2PT_USERDATA             /* Data to copy into NXPINT_USERDATA. */
+	NXAC2PT_PAUSE                /* Flag to pause pipeline to resume later. */
+	NXAC2PT_METER_ID             /* ovs_b32 meter (default NX_CTLR_NO_METER). */
+
+	NX_CTLR_NO_METER = 0
+)
+
+type NXActionController2PropMaxLen struct {
+	*PropHeader /* Type: NXAC2PT_MAX_LEN */
+	MaxLen      uint16
+	pad         [2]uint8
+}
+
+func (a *NXActionController2PropMaxLen) Len() uint16 {
+	return a.PropHeader.Len() + 4
+}
+
+func (a *NXActionController2PropMaxLen) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, a.Len())
+	var b []byte
+	n := 0
+
+	a.Length = a.PropHeader.Len() + 2
+	b, err = a.PropHeader.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	copy(data[n:], b)
+	n += int(a.PropHeader.Len())
+
+	binary.BigEndian.PutUint16(data[n:], a.MaxLen)
+	return
+}
+
+func (a *NXActionController2PropMaxLen) UnmarshalBinary(data []byte) error {
+	a.PropHeader = new(PropHeader)
+	n := 0
+
+	if err := a.PropHeader.UnmarshalBinary(data[n:]); err != nil {
+		return err
+	}
+	if len(data) < int(a.Length) {
+		return errors.New("the []byte is too short to unmarshal a full NXActionController2PropMaxLen message")
+	}
+	n += int(a.PropHeader.Len())
+
+	a.MaxLen = binary.BigEndian.Uint16(data[n:])
+	return nil
+}
+
+func NewMaxLen(maxLen uint16) *NXActionController2PropMaxLen {
+	a := new(NXActionController2PropMaxLen)
+	a.PropHeader = new(PropHeader)
+	a.Type = NXAC2PT_MAX_LEN
+	a.Length = a.PropHeader.Len() + 2
+	a.MaxLen = maxLen
+	return a
+}
+
+type NXActionController2PropControllerID struct {
+	*PropHeader  /* Type: NXAC2PT_CONTROLLER_ID */
+	ControllerID uint16
+	pad          [2]uint8
+}
+
+func (a *NXActionController2PropControllerID) Len() uint16 {
+	return a.PropHeader.Len() + 4
+}
+
+func (a *NXActionController2PropControllerID) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, a.Len())
+	var b []byte
+	n := 0
+
+	a.Length = a.PropHeader.Len() + 2
+	b, err = a.PropHeader.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	copy(data[n:], b)
+	n += int(a.PropHeader.Len())
+
+	binary.BigEndian.PutUint16(data[n:], a.ControllerID)
+	return
+}
+
+func (a *NXActionController2PropControllerID) UnmarshalBinary(data []byte) error {
+	a.PropHeader = new(PropHeader)
+	n := 0
+
+	if err := a.PropHeader.UnmarshalBinary(data[n:]); err != nil {
+		return err
+	}
+	if len(data) < int(a.Length) {
+		return errors.New("the []byte is too short to unmarshal a full NXActionController2PropControllerID message")
+	}
+	n += int(a.PropHeader.Len())
+
+	a.ControllerID = binary.BigEndian.Uint16(data[n:])
+	return nil
+}
+
+func NewControllerID(controllerID uint16) *NXActionController2PropControllerID {
+	a := new(NXActionController2PropControllerID)
+	a.PropHeader = new(PropHeader)
+	a.Type = NXAC2PT_CONTROLLER_ID
+	a.Length = a.PropHeader.Len() + 2
+	a.ControllerID = controllerID
+	return a
+}
+
+type NXActionController2PropReason struct {
+	*PropHeader /* Type: NXAC2PT_REASON */
+	Reason      uint8
+	pad         [3]uint8
+}
+
+func (a *NXActionController2PropReason) Len() uint16 {
+	return a.PropHeader.Len() + 4
+}
+
+func (a *NXActionController2PropReason) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, a.Len())
+	var b []byte
+	n := 0
+
+	a.Length = a.PropHeader.Len() + 1
+	b, err = a.PropHeader.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	copy(data[n:], b)
+	n += int(a.PropHeader.Len())
+
+	data[n] = a.Reason
+	return
+}
+
+func (a *NXActionController2PropReason) UnmarshalBinary(data []byte) error {
+	a.PropHeader = new(PropHeader)
+	n := 0
+
+	if err := a.PropHeader.UnmarshalBinary(data[n:]); err != nil {
+		return err
+	}
+	if len(data) < int(a.Length) {
+		return errors.New("the []byte is too short to unmarshal a full NXActionController2PropReason message")
+	}
+	n += int(a.PropHeader.Len())
+
+	a.Reason = data[n]
+	return nil
+}
+
+func NewReason(reason uint8) *NXActionController2PropReason {
+	a := new(NXActionController2PropReason)
+	a.PropHeader = new(PropHeader)
+	a.Type = NXAC2PT_REASON
+	a.Length = a.PropHeader.Len() + 1
+	a.Reason = reason
+	return a
+}
+
+type NXActionController2PropUserdata struct {
+	*PropHeader /* Type: NXAC2PT_USERDATA */
+	Userdata    []byte
+	pad         []uint8
+}
+
+func (a *NXActionController2PropUserdata) Len() uint16 {
+	length := a.PropHeader.Len() + uint16(len(a.Userdata))
+	return 8 * ((length + 7) / 8)
+}
+
+func (a *NXActionController2PropUserdata) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, a.Len())
+	var b []byte
+	n := 0
+
+	a.Length = a.PropHeader.Len() + uint16(len(a.Userdata))
+	b, err = a.PropHeader.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	copy(data[n:], b)
+	n += int(a.PropHeader.Len())
+
+	copy(data[n:], a.Userdata)
+	return
+}
+
+func (a *NXActionController2PropUserdata) UnmarshalBinary(data []byte) error {
+	a.PropHeader = new(PropHeader)
+	n := 0
+
+	if err := a.PropHeader.UnmarshalBinary(data[n:]); err != nil {
+		return err
+	}
+	if len(data) < int(a.Length) {
+		return errors.New("the []byte is too short to unmarshal a full NXActionController2PropUserdata message")
+	}
+	n += int(a.PropHeader.Len())
+
+	a.Userdata = data[n:a.Length]
+	return nil
+}
+
+func NewUserdata(userdata []byte) *NXActionController2PropUserdata {
+	a := new(NXActionController2PropUserdata)
+	a.PropHeader = new(PropHeader)
+	a.Type = NXAC2PT_USERDATA
+	a.Length = a.PropHeader.Len() + uint16(len(a.Userdata))
+	a.Userdata = userdata
+	return a
+}
+
+type NXActionController2PropPause struct {
+	*PropHeader /* Type: NXAC2PT_PAUSE */
+	pad         [4]uint8
+}
+
+func (a *NXActionController2PropPause) Len() uint16 {
+	return a.PropHeader.Len() + 4
+}
+
+func (a *NXActionController2PropPause) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, a.Len())
+	var b []byte
+	n := 0
+
+	a.Length = a.PropHeader.Len()
+	b, err = a.PropHeader.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	copy(data[n:], b)
+	n += int(a.PropHeader.Len())
+	return
+}
+
+func (a *NXActionController2PropPause) UnmarshalBinary(data []byte) error {
+	a.PropHeader = new(PropHeader)
+	n := 0
+
+	if err := a.PropHeader.UnmarshalBinary(data[n:]); err != nil {
+		return err
+	}
+	if len(data) < int(a.Length) {
+		return errors.New("the []byte is too short to unmarshal a full NXActionController2PropPause message")
+	}
+	n += int(a.PropHeader.Len())
+	return nil
+}
+
+func NewPause() *NXActionController2PropPause {
+	a := new(NXActionController2PropPause)
+	a.PropHeader = new(PropHeader)
+	a.Type = NXAC2PT_PAUSE
+	a.Length = a.PropHeader.Len()
+	return a
+}
+
+type NXActionController2PropMeterId struct {
+	*PropHeader /* Type: NXAC2PT_METER_ID */
+	MeterId     uint32
+}
+
+func (a *NXActionController2PropMeterId) Len() uint16 {
+	return a.PropHeader.Len() + 4
+}
+
+func (a *NXActionController2PropMeterId) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, a.Len())
+	var b []byte
+	n := 0
+
+	a.Length = a.PropHeader.Len() + 4
+	b, err = a.PropHeader.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	copy(data[n:], b)
+	n += int(a.PropHeader.Len())
+
+	binary.BigEndian.PutUint32(data[n:], a.MeterId)
+	return
+}
+
+func (a *NXActionController2PropMeterId) UnmarshalBinary(data []byte) error {
+	a.PropHeader = new(PropHeader)
+	n := 0
+
+	if err := a.PropHeader.UnmarshalBinary(data[n:]); err != nil {
+		return err
+	}
+	if len(data) < int(a.Length) {
+		return errors.New("the []byte is too short to unmarshal a full NXActionController2PropMeterId message")
+	}
+	n += int(a.PropHeader.Len())
+
+	a.MeterId = binary.BigEndian.Uint32(data[n:])
+	return nil
+}
+
+func NewMeterId(meterId uint32) *NXActionController2PropMeterId {
+	a := new(NXActionController2PropMeterId)
+	a.PropHeader = new(PropHeader)
+	a.Type = NXAC2PT_METER_ID
+	a.Length = a.PropHeader.Len() + 4
+	a.MeterId = meterId
+	return a
+}
+
+// Decode Controller2 Property types.
+func DecodeController2Prop(data []byte) (Property, error) {
+	t := binary.BigEndian.Uint16(data[:2])
+	var p Property
+	switch t {
+	case NXAC2PT_MAX_LEN:
+		p = new(NXActionController2PropMaxLen)
+	case NXAC2PT_CONTROLLER_ID:
+		p = new(NXActionController2PropControllerID)
+	case NXAC2PT_REASON:
+		p = new(NXActionController2PropReason)
+	case NXAC2PT_USERDATA:
+		p = new(NXActionController2PropUserdata)
+	case NXAC2PT_PAUSE:
+		p = new(NXActionController2PropPause)
+	case NXAC2PT_METER_ID:
+		p = new(NXActionController2PropMeterId)
+	}
+	err := p.UnmarshalBinary(data)
+	if err != nil {
+		return p, err
+	}
+	return p, nil
+}
+
+// NXActionController2 is NX action to output packet to the Controller set with a specified ID.
+type NXActionController2 struct {
+	*NXActionHeader
+	pad [6]uint8
+
+	props []Property
+}
+
+func (a *NXActionController2) Len() uint16 {
+	n := a.NXActionHeader.Len() + 6
+	for _, prop := range a.props {
+		n += prop.Len()
+	}
+	return n
+}
+
+func (a *NXActionController2) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, a.Len())
+	var b []byte
+	n := 0
+
+	a.Length = a.Len()
+	b, err = a.NXActionHeader.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	copy(data[n:], b)
+	n += int(a.NXActionHeader.Len())
+	n += 6
+
+	for _, prop := range a.props {
+		b, err = prop.MarshalBinary()
+		if err != nil {
+			return nil, err
+		}
+		copy(data[n:], b)
+		n += int(prop.Len())
+	}
+
+	return
+}
+
+func (a *NXActionController2) UnmarshalBinary(data []byte) error {
+	a.NXActionHeader = new(NXActionHeader)
+	n := 0
+
+	if err := a.NXActionHeader.UnmarshalBinary(data[n:]); err != nil {
+		return err
+	}
+	if len(data) < int(a.Length) {
+		return errors.New("the []byte is too short to unmarshal a full NXActionController2 message")
+	}
+	n += int(a.NXActionHeader.Len())
+	n += 6
+
+	for n < int(a.Length) {
+		prop, err := DecodeController2Prop(data[n:])
+		if err != nil {
+			return errors.New("failed to decode property")
+		}
+		a.props = append(a.props, prop)
+		n += int(prop.Len())
+	}
+
+	return nil
+}
+
+func (a *NXActionController2) AddMaxLen(maxLen uint16) {
+	a.props = append(a.props, NewMaxLen(maxLen))
+	a.Length = a.Len()
+}
+
+func (a *NXActionController2) AddControllerID(controllerID uint16) {
+	a.props = append(a.props, NewControllerID(controllerID))
+	a.Length = a.Len()
+}
+
+func (a *NXActionController2) AddReason(reason uint8) {
+	a.props = append(a.props, NewReason(reason))
+	a.Length = a.Len()
+}
+
+func (a *NXActionController2) AddUserdata(userdata []byte) {
+	a.props = append(a.props, NewUserdata(userdata))
+	a.Length = a.Len()
+}
+
+func (a *NXActionController2) AddPause(pause bool) {
+	if pause {
+		a.props = append(a.props, NewPause())
+		a.Length = a.Len()
+	}
+}
+
+func (a *NXActionController2) AddMeterID(meterID uint32) {
+	if meterID != NX_CTLR_NO_METER {
+		a.props = append(a.props, NewMeterId(meterID))
+		a.Length = a.Len()
+	}
+}
+
+func NewNXActionController2() *NXActionController2 {
+	a := new(NXActionController2)
+	a.NXActionHeader = NewNxActionHeader(NXAST_CONTROLLER2)
 	return a
 }

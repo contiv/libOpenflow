@@ -223,7 +223,7 @@ func (p *PacketOut) Len() (n uint16) {
 		n += a.Len()
 	}
 	n += p.Data.Len()
-	//if n < 72 { return 72 }
+	// if n < 72 { return 72 }
 	return
 }
 
@@ -392,6 +392,9 @@ const (
 	R_NO_MATCH    = iota /* No matching flow (table-miss flow entry). */
 	R_ACTION             /* Action explicitly output to controller. */
 	R_INVALID_TTL        /* Packet has invalid TTL */
+	R_ACTION_SET         /* Output to controller in action set */
+	R_GROUP              /* Output to controller in group bucket */
+	R_PACKET_OUT         /* Output to controller in packet-out */
 )
 
 func NewConfigRequest() *common.Header {
@@ -840,5 +843,49 @@ func (v *VendorHeader) UnmarshalBinary(data []byte) error {
 			return err
 		}
 	}
+	return nil
+}
+
+type Property interface {
+	Header() *PropHeader
+	util.Message
+}
+
+/* Generic OpenFlow property header, as used by various messages in OF1.3+, and
+ * especially in OF1.4.
+ *
+ * The OpenFlow specs prefer to define a new structure with a specialized name
+ * each time this property structure comes up: struct
+ * ofp_port_desc_prop_header, struct ofp_controller_status_prop_header, struct
+ * ofp_table_mod_prop_header, and more.  They're all the same, so it's easier
+ * to unify them.
+ */
+type PropHeader struct {
+	Type   uint16
+	Length uint16
+}
+
+func (p *PropHeader) Header() *PropHeader {
+	return p
+}
+
+func (p *PropHeader) Len() (n uint16) {
+	return 4
+}
+
+func (p *PropHeader) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, p.Len())
+	binary.BigEndian.PutUint16(data[:2], p.Type)
+	binary.BigEndian.PutUint16(data[2:4], p.Length)
+	return
+}
+
+func (p *PropHeader) UnmarshalBinary(data []byte) error {
+	if len(data) < int(p.Len()) {
+		return errors.New("the []byte the wrong size to unmarshal an " +
+			"PropHeader message")
+	}
+	p.Type = binary.BigEndian.Uint16(data[:2])
+	p.Length = binary.BigEndian.Uint16(data[2:4])
 	return nil
 }
