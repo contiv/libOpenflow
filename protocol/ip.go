@@ -10,6 +10,7 @@ import (
 
 const (
 	Type_ICMP     = 0x01
+	Type_IGMP     = 0x02
 	Type_TCP      = 0x06
 	Type_UDP      = 0x11
 	Type_IPv6     = 0x29
