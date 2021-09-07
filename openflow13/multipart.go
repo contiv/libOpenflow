@@ -57,6 +57,9 @@ func (s *MultipartRequest) MarshalBinary() (data []byte, err error) {
 
 func (s *MultipartRequest) UnmarshalBinary(data []byte) error {
 	err := s.Header.UnmarshalBinary(data)
+	if err != nil {
+		return err
+	}
 	n := s.Header.Len()
 
 	s.Type = binary.BigEndian.Uint16(data[n:])
@@ -70,24 +73,17 @@ func (s *MultipartRequest) UnmarshalBinary(data []byte) error {
 		switch s.Type {
 		case MultipartType_Aggregate:
 			req = new(AggregateStatsRequest)
-			err = req.UnmarshalBinary(data[n:])
 		case MultipartType_Desc:
 		case MultipartType_Flow:
 			req = new(FlowStatsRequest)
-			err = req.UnmarshalBinary(data[n:])
 		case MultipartType_Port:
 			req = new(PortStatsRequest)
-			err = req.UnmarshalBinary(data[n:])
 		case MultipartType_Table:
 		case MultipartType_Queue:
 			req = new(QueueStatsRequest)
-			err = req.UnmarshalBinary(data[n:])
 		case MultipartType_Experimenter:
 		case MultipartType_TableFeatures:
 			req = new(OFPTableFeatures)
-		}
-		if err != nil {
-			return err
 		}
 		if req == nil {
 			return fmt.Errorf("unsupported MultipartRequest type: %d", s.Type)
