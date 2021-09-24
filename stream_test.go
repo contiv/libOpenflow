@@ -31,6 +31,7 @@ func (f *fakeConn) Read(b []byte) (int, error) {
 		return 0, io.EOF
 	}
 	f.count++
+	regenerateMessage()
 	copy(b, binaryMessage)
 	return len(binaryMessage), nil
 }
@@ -72,7 +73,7 @@ func (p parserIntf) Parse(b []byte) (message util.Message, err error) {
 	return
 }
 
-func init() {
+func regenerateMessage() {
 	helloMessage, _ = common.NewHello(4)
 	binaryMessage, _ = helloMessage.MarshalBinary()
 

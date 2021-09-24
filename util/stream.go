@@ -13,13 +13,11 @@ const numParserGoroutines = 25
 
 type BufferPool struct {
 	Empty chan *bytes.Buffer
-	Full  chan *bytes.Buffer
 }
 
 func NewBufferPool() *BufferPool {
 	m := new(BufferPool)
 	m.Empty = make(chan *bytes.Buffer, 50)
-	m.Full = make(chan *bytes.Buffer, 50)
 
 	for i := 0; i < 50; i++ {
 		m.Empty <- bytes.NewBuffer(make([]byte, 0, 2048))
@@ -30,6 +28,30 @@ func NewBufferPool() *BufferPool {
 // Parser interface
 type Parser interface {
 	Parse(b []byte) (message Message, err error)
+}
+
+type streamWorker struct {
+	Full chan *bytes.Buffer
+}
+
+func (w *streamWorker) parse(stopCh chan bool, parser Parser, inbound chan Message, empty chan *bytes.Buffer) {
+	errMessage := "received: %v and encountered error: %v"
+	for {
+		select {
+		case b := <-w.Full:
+			msg, err := parser.Parse(b.Bytes())
+			// Log all message parsing errors.
+			if err != nil {
+				log.Errorf(errMessage, b.Bytes(), err)
+			} else {
+				inbound <- msg
+			}
+			b.Reset()
+			empty <- b
+		case <-stopCh:
+			return
+		}
+	}
 }
 
 type MessageStream struct {
@@ -49,6 +71,8 @@ type MessageStream struct {
 	Outbound chan Message
 	// Channel on which to receive a shutdown command
 	Shutdown chan bool
+	// Worker to parse the message received from the connection
+	workers []streamWorker
 }
 
 // Returns a pointer to a new MessageStream. Used to parse
@@ -58,19 +82,24 @@ func NewMessageStream(conn net.Conn, parser Parser) *MessageStream {
 		conn,
 		NewBufferPool(),
 		parser,
-		make(chan bool, 1), // parserShutdown
+		make(chan bool, 1),
 		0,
 		make(chan error, 1),   // Error
 		make(chan Message, 1), // Inbound
 		make(chan Message, 1), // Outbound
 		make(chan bool, 1),    // Shutdown
+		make([]streamWorker, numParserGoroutines),
 	}
 
+	for i := 0; i < numParserGoroutines; i++ {
+		worker := streamWorker{
+			Full: make(chan *bytes.Buffer),
+		}
+		m.workers[i] = worker
+		go worker.parse(m.parserShutdown, m.parser, m.Inbound, m.pool.Empty)
+	}
 	go m.outbound()
 	go m.inbound()
-	for i := 0; i < numParserGoroutines; i++ {
-		go m.parse()
-	}
 
 	return m
 }
@@ -86,9 +115,7 @@ func (m *MessageStream) outbound() {
 		case <-m.Shutdown:
 			log.Infof("Closing OpenFlow message stream.")
 			m.conn.Close()
-			for i := 0; i < numParserGoroutines; i++ {
-				m.parserShutdown <- true
-			}
+			close(m.parserShutdown)
 			return
 		case msg := <-m.Outbound:
 			// Forward outbound messages to conn
@@ -140,7 +167,7 @@ func (m *MessageStream) inbound() {
 				msg = msg - 1
 				if msg == 0 {
 					hdr = 0
-					m.pool.Full <- buf
+					m.dispatchMessage(buf)
 					buf = <-m.pool.Empty
 				}
 				continue
@@ -149,23 +176,14 @@ func (m *MessageStream) inbound() {
 	}
 }
 
-// Parse incoming message
-func (m *MessageStream) parse() {
-	errMessage := "received: %v and encountered error: %v"
-	for {
-		select {
-		case b := <-m.pool.Full:
-			msg, err := m.parser.Parse(b.Bytes())
-			// Log all message parsing errors.
-			if err != nil {
-				log.Errorf(errMessage, b.Bytes(), err)
-			}
-
-			m.Inbound <- msg
-			b.Reset()
-			m.pool.Empty <- b
-		case <-m.parserShutdown:
-			return
-		}
+// Dispatch the message to streamWorker according to Xid in the message Header
+func (m *MessageStream) dispatchMessage(b *bytes.Buffer) {
+	msgBytes := b.Bytes()
+	if len(msgBytes) < 8 {
+		log.Error("buffer too small to parse OpenFlow messages")
+		return
 	}
+	xid := binary.BigEndian.Uint32(msgBytes[4:])
+	workerKey := int(xid % uint32(len(m.workers)))
+	m.workers[workerKey].Full <- b
 }
