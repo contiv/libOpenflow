@@ -193,6 +193,7 @@ const (
 	PC_PORT_DOWN = 1 << 0
 
 	PC_NO_RECV      = 1 << 2
+	PC_NO_FLOOD     = 1 << 4
 	PC_NO_FWD       = 1 << 5
 	PC_NO_PACKET_IN = 1 << 6
 )
