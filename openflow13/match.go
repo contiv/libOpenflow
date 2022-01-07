@@ -368,6 +368,7 @@ func DecodeMatchField(class uint16, field uint8, length uint8, hasMask bool, dat
 		case NXM_NX_IPV6_LABEL:
 		case NXM_NX_IP_ECN:
 		case NXM_NX_IP_TTL:
+			val = new(TtlField)
 		case NXM_NX_MPLS_TTL:
 		case NXM_NX_TUN_IPV4_SRC:
 			val = new(TunnelIpv4SrcField)
@@ -1478,6 +1479,43 @@ func NewTunnelIpv6DstField(tunnelIpv6Dst net.IP, tunnelIpv6DstMask *net.IP) *Mat
 		f.HasMask = true
 		f.Length += uint8(mask.Len())
 	}
+
+	return f
+}
+
+type TtlField struct {
+	Ttl uint8
+}
+
+func (m *TtlField) Len() uint16 {
+	return 1
+}
+
+func (m *TtlField) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, 1)
+	data[0] = m.Ttl
+	return
+}
+
+func (m *TtlField) UnmarshalBinary(data []byte) error {
+	if len(data) < int(m.Len()) {
+		return fmt.Errorf("the []byte is too short to unmarshal a full TtlField message")
+	}
+	m.Ttl = data[0]
+	return nil
+}
+
+// NewIPTtlField will return a MatchField for ipv4 ttl
+func NewIPTtlField(ttl uint8) *MatchField {
+	f := new(MatchField)
+	f.Class = OXM_CLASS_NXM_1
+	f.Field = NXM_NX_IP_TTL
+	f.HasMask = false
+
+	ttlField := new(TtlField)
+	ttlField.Ttl = ttl
+	f.Value = ttlField
+	f.Length = uint8(ttlField.Len())
 
 	return f
 }
