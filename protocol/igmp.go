@@ -71,7 +71,7 @@ func (p *IGMPv1or2) UnmarshalBinary(data []byte) error {
 	if len(data) < 8 {
 		return errors.New("The []byte is too short to unmarshal a full IGMPv1or2 message.")
 	}
-
+	p.Type = data[0]
 	p.MaxResponseTime = data[1]
 	p.Checksum = binary.BigEndian.Uint16(data[2:4])
 	p.GroupAddress = data[4:8]
@@ -188,7 +188,7 @@ func (p *IGMPv3Query) UnmarshalBinary(data []byte) error {
 	p.Checksum = binary.BigEndian.Uint16(data[n:])
 	n += 2
 	p.GroupAddress = data[n : n+4]
-	n += 5
+	n += 4
 	p.SuppressRouterProcessing = data[n]&0x8 != 0
 	p.RobustnessValue = data[n] & 0x7
 	n += 1
@@ -196,7 +196,7 @@ func (p *IGMPv3Query) UnmarshalBinary(data []byte) error {
 	n += 1
 	p.NumberOfSources = binary.BigEndian.Uint16(data[n:])
 	n += 2
-	if len(data) < int(12+p.NumberOfSources*4) {
+	if len(data) < int(p.Len()) {
 		return fmt.Errorf("The []byte is too short to unmarshal a full IGMPv3Query message.")
 	}
 	for j := 0; j < int(p.NumberOfSources); j++ {
@@ -293,7 +293,7 @@ func (p *IGMPv3GroupRecord) UnmarshalBinary(data []byte) error {
 	n += 2
 	p.MulticastAddress = data[n : n+4]
 	n += 4
-	if len(data) < int(8+p.NumberOfSources*4)+int(p.AuxDataLen) {
+	if len(data) < int(p.Len()) {
 		return fmt.Errorf("The []byte is too short to unmarshal a full IGMPv3GroupRecord message.")
 	}
 	for i := uint16(0); i < p.NumberOfSources; i++ {
