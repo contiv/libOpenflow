@@ -200,6 +200,9 @@ func newNXRegHeader(idx int, hasMask bool) *MatchField {
 	return header
 }
 
+// This function will generate a MatchField with continuous reg mask according
+// to dataRng. We may need to use NewRegMatchFieldWithMask if we want a discontinuous
+// reg mask, such as, 0x5.
 func NewRegMatchField(idx int, data uint32, dataRng *NXRange) *MatchField {
 	var field *MatchField
 	field = newNXRegHeader(idx, dataRng != nil)
@@ -207,6 +210,20 @@ func NewRegMatchField(idx int, data uint32, dataRng *NXRange) *MatchField {
 	field.Value = newUint32Message(data)
 	if dataRng != nil {
 		field.Mask = newUint32Message(dataRng.ToUint32Mask())
+	}
+	return field
+}
+
+// This function will generate a MatchField with data/mask for Reg[idx]. The mask can
+// be arbitrary bitwise, including continuous mask, such as, 0x7 and discontinous
+// mask, such as, 0x5.
+func NewRegMatchFieldWithMask(idx int, data uint32, mask uint32) *MatchField {
+	var field *MatchField
+	field = newNXRegHeader(idx, mask != 0)
+
+	field.Value = newUint32Message(data)
+	if mask != 0 {
+		field.Mask = newUint32Message(mask)
 	}
 	return field
 }
