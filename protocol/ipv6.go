@@ -166,7 +166,8 @@ checkXHeader:
 			nxtHeader = i.FragmentHeader.NextHeader
 			n += int(i.FragmentHeader.Len())
 		case Type_IPv6ICMP:
-			i.Data = NewICMP()
+			packetType := data[n]
+			i.Data = NewICMPv6ByHeaderType(packetType)
 			break checkXHeader
 		case Type_UDP:
 			i.Data = NewUDP()
