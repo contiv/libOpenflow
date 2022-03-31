@@ -288,6 +288,7 @@ func DecodeMatchField(class uint16, field uint8, length uint8, hasMask bool, dat
 		case OXM_FIELD_MPLS_LABEL:
 			val = new(MplsLabelField)
 		case OXM_FIELD_MPLS_TC:
+			val = new(MplsTcField)
 		case OXM_FIELD_MPLS_BOS:
 			val = new(MplsBosField)
 		case OXM_FIELD_PBB_ISID:
@@ -870,6 +871,44 @@ func NewMplsBosField(mplsBos uint8) *MatchField {
 	mplsBosField.MplsBos = mplsBos
 	f.Value = mplsBosField
 	f.Length = uint8(mplsBosField.Len())
+	return f
+}
+
+// MplsTc field
+type MplsTcField struct {
+	MplsTc uint8
+}
+
+func (m *MplsTcField) Len() uint16 {
+	return 1
+}
+
+func (m *MplsTcField) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, 1)
+	data[0] = m.MplsTc
+	return
+}
+
+func (m *MplsTcField) UnmarshalBinary(data []byte) error {
+	if len(data) < int(m.Len()) {
+		return fmt.Errorf("the []byte is too short to unmarshal a full MplsTcField message")
+	}
+
+	m.MplsTc = data[0]
+	return nil
+}
+
+// Return a MatchField for mpls Tc matching
+func NewMplsTcField(mplsTc uint8) *MatchField {
+	f := new(MatchField)
+	f.Class = OXM_CLASS_OPENFLOW_BASIC
+	f.Field = OXM_FIELD_MPLS_TC
+	f.HasMask = false
+
+	mplsTcField := new(MplsTcField)
+	mplsTcField.MplsTc = mplsTc
+	f.Value = mplsTcField
+	f.Length = uint8(mplsTcField.Len())
 	return f
 }
 
