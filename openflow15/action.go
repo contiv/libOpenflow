@@ -1,13 +1,14 @@
-package openflow13
+package openflow15
 
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 
 	"antrea.io/libOpenflow/util"
 )
 
-// ofp_action_type
+// ofp_action_type 1.5
 const (
 	ActionType_Output     = 0
 	ActionType_CopyTtlOut = 11
@@ -25,6 +26,8 @@ const (
 	ActionType_SetField   = 25
 	ActionType_PushPbb    = 26
 	ActionType_PopPbb     = 27
+	ActionType_Copy_Field = 28
+	ActionType_Meter      = 29
 
 	ActionType_Experimenter = 0xffff
 )
@@ -101,6 +104,10 @@ func DecodeAction(data []byte) (Action, error) {
 		a = new(ActionPush)
 	case ActionType_PopPbb:
 		a = new(ActionHeader)
+	case ActionType_Copy_Field:
+		a = new(ActionCopyField)
+	case ActionType_Meter:
+		a = new(ActionMeter)
 	case ActionType_Experimenter:
 		// For Experimenter message, the length of action should be at least 10 bytes,
 		// including type(2 byte), length(2 byte), vendor(4 byte), and subtype(2 byte)
@@ -111,6 +118,8 @@ func DecodeAction(data []byte) (Action, error) {
 		if v == NxExperimenterID {
 			a = DecodeNxAction(data)
 		}
+	default:
+		return nil, fmt.Errorf("DecodeAction unknown type: %v", t)
 	}
 	err := a.UnmarshalBinary(data)
 	if err != nil {
@@ -130,7 +139,7 @@ type ActionOutput struct {
 	pad    []byte // 6 bytes to make it 64bit aligned
 }
 
-// ofp_controller_max_len 1.3
+// ofp_controller_max_len
 const (
 	OFPCML_MAX       = 0xffe5 /* maximum max_len value which can be used to request a specific byte length. */
 	OFPCML_NO_BUFFER = 0xffff /* indicates that no buffering should be applied and the whole packet is to be sent to the controller. */
@@ -143,7 +152,7 @@ func NewActionOutput(portNum uint32) *ActionOutput {
 	act.Type = ActionType_Output
 	act.Length = act.Len()
 	act.Port = portNum
-	act.MaxLen = 256
+	act.MaxLen = OFPCML_NO_BUFFER
 	act.pad = make([]byte, 6)
 	return act
 }
@@ -157,7 +166,8 @@ func (a *ActionOutput) MarshalBinary() (data []byte, err error) {
 	var b []byte
 	n := 0
 
-	if b, err = a.ActionHeader.MarshalBinary(); err != nil {
+	b, err = a.ActionHeader.MarshalBinary()
+	if err != nil {
 		return
 	}
 	copy(data[n:], b)
@@ -179,6 +189,9 @@ func (a *ActionOutput) UnmarshalBinary(data []byte) error {
 	}
 	n := 0
 	err := a.ActionHeader.UnmarshalBinary(data[n:])
+	if err != nil {
+		return err
+	}
 	n += int(a.ActionHeader.Len())
 	a.Port = binary.BigEndian.Uint32(data[n:])
 	n += 4
@@ -208,6 +221,9 @@ func (a *ActionSetqueue) Len() (n uint16) {
 
 func (a *ActionSetqueue) MarshalBinary() (data []byte, err error) {
 	data, err = a.ActionHeader.MarshalBinary()
+	if err != nil {
+		return
+	}
 
 	bytes := make([]byte, 4)
 	binary.BigEndian.PutUint32(bytes[0:], a.QueueId)
@@ -248,7 +264,8 @@ func (a *ActionGroup) MarshalBinary() (data []byte, err error) {
 	var b []byte
 	n := 0
 
-	if b, err = a.ActionHeader.MarshalBinary(); err != nil {
+	b, err = a.ActionHeader.MarshalBinary()
+	if err != nil {
 		return
 	}
 	copy(data[n:], b)
@@ -266,6 +283,9 @@ func (a *ActionGroup) UnmarshalBinary(data []byte) error {
 	}
 	n := 0
 	err := a.ActionHeader.UnmarshalBinary(data[n:])
+	if err != nil {
+		return err
+	}
 	n += int(a.ActionHeader.Len())
 	a.GroupId = binary.BigEndian.Uint32(data[n:])
 	n += 4
@@ -346,6 +366,9 @@ func (a *ActionPush) Len() (n uint16) {
 
 func (a *ActionPush) MarshalBinary() (data []byte, err error) {
 	data, err = a.ActionHeader.MarshalBinary()
+	if err != nil {
+		return
+	}
 
 	bytes := make([]byte, 4)
 	binary.BigEndian.PutUint16(bytes[0:], a.EtherType)
@@ -379,6 +402,9 @@ func (a *ActionPopVlan) Len() (n uint16) {
 
 func (a *ActionPopVlan) MarshalBinary() (data []byte, err error) {
 	data, err = a.ActionHeader.MarshalBinary()
+	if err != nil {
+		return
+	}
 
 	// Padding
 	bytes := make([]byte, 4)
@@ -413,6 +439,9 @@ func (a *ActionPopMpls) Len() (n uint16) {
 
 func (a *ActionPopMpls) MarshalBinary() (data []byte, err error) {
 	data, err = a.ActionHeader.MarshalBinary()
+	if err != nil {
+		return
+	}
 
 	// Padding
 	bytes := make([]byte, 4)
@@ -451,31 +480,189 @@ func (a *ActionSetField) Len() (n uint16) {
 
 func (a *ActionSetField) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, int(a.Len()))
-	var b []byte
 	n := 0
-	if b, err = a.ActionHeader.MarshalBinary(); err != nil {
+	b, err := a.ActionHeader.MarshalBinary()
+	if err != nil {
 		return
 	}
 	copy(data, b)
 	n += int(a.ActionHeader.Len())
 
-	if b, err = a.Field.MarshalBinary(); err != nil {
+	b, err = a.Field.MarshalBinary()
+	if err != nil {
 		return
 	}
 	copy(data[n:], b)
 
 	return
 }
+
 func (a *ActionSetField) UnmarshalBinary(data []byte) error {
 	n := 0
-	if err := a.ActionHeader.UnmarshalBinary(data[n:]); err != nil {
+	err := a.ActionHeader.UnmarshalBinary(data[n:])
+	if err != nil {
 		return err
 	}
 	n += int(a.ActionHeader.Len())
-	if err := a.Field.UnmarshalBinary(data[n:]); err != nil {
+	err = a.Field.UnmarshalBinary(data[n:])
+	if err != nil {
 		return err
 	}
 	n += int(a.Field.Len())
 
-	return nil
+	return err
+}
+
+// ofp_action_copy_field
+type ActionCopyField struct {
+	ActionHeader
+	NBits     uint16
+	SrcOffset uint16
+	DstOffset uint16
+	Pad       uint16
+	OxmIdSrc  OxmId
+	OxmIdDst  OxmId
+}
+
+func NewActionCopyField(nBits uint16, srcOffset uint16, dstOffset uint16,
+	srcOxmId OxmId, dstOxmId OxmId) *ActionCopyField {
+	a := new(ActionCopyField)
+	a.Type = ActionType_Copy_Field
+	a.Length = a.Len()
+	a.NBits = nBits
+	a.SrcOffset = srcOffset
+	a.DstOffset = dstOffset
+	a.OxmIdSrc = srcOxmId
+	a.OxmIdDst = dstOxmId
+	return a
+}
+
+func (a *ActionCopyField) Len() (n uint16) {
+	n = a.ActionHeader.Len() + 8
+	n += a.OxmIdSrc.Len()
+	n += a.OxmIdDst.Len()
+	// Round it to closest multiple of 8
+	n = ((n + 7) / 8) * 8
+
+	return
+}
+
+func (a *ActionCopyField) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, int(a.Len()))
+	var n uint16
+	b, err := a.ActionHeader.MarshalBinary()
+	if err != nil {
+		return
+	}
+	copy(data, b)
+	n += a.ActionHeader.Len()
+
+	binary.BigEndian.PutUint16(data[n:], a.NBits)
+	n += 2
+
+	binary.BigEndian.PutUint16(data[n:], a.SrcOffset)
+	n += 2
+
+	binary.BigEndian.PutUint16(data[n:], a.DstOffset)
+	n += 2
+
+	// Extra 2 bytes for Pad
+	n += 2
+
+	b, err = a.OxmIdSrc.MarshalBinary()
+	if err != nil {
+		return data, err
+	}
+	copy(data[n:], b)
+	n += a.OxmIdSrc.Len()
+
+	b, err = a.OxmIdDst.MarshalBinary()
+	if err != nil {
+		return data, err
+	}
+	copy(data[n:], b)
+	n += a.OxmIdDst.Len()
+
+	return
+}
+
+func (a *ActionCopyField) UnmarshalBinary(data []byte) error {
+	var n uint16
+	err := a.ActionHeader.UnmarshalBinary(data[n:])
+	if err != nil {
+		return err
+	}
+	n += a.ActionHeader.Len()
+
+	a.NBits = binary.BigEndian.Uint16(data[n:])
+	n += 2
+
+	a.SrcOffset = binary.BigEndian.Uint16(data[n:])
+	n += 2
+
+	a.DstOffset = binary.BigEndian.Uint16(data[n:])
+	n += 2
+	n += 2 // Pad
+
+	err = a.OxmIdSrc.UnmarshalBinary(data[n:])
+	if err != nil {
+		return err
+	}
+	n += a.OxmIdSrc.Len()
+
+	err = a.OxmIdDst.UnmarshalBinary(data[n:])
+	if err != nil {
+		return err
+	}
+	n += a.OxmIdDst.Len()
+
+	return err
+}
+
+// ofp_action_meter
+type ActionMeter struct {
+	ActionHeader
+	MeterId uint32
+}
+
+func NewActionMeter(meterId uint32) *ActionMeter {
+	a := new(ActionMeter)
+	a.Type = ActionType_Meter
+	a.Length = a.Len()
+	a.MeterId = meterId
+	return a
+}
+
+func (a *ActionMeter) Len() (n uint16) {
+	n = a.ActionHeader.Len() + 4
+
+	return
+}
+
+func (a *ActionMeter) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, int(a.Len()))
+	n := 0
+	b, err := a.ActionHeader.MarshalBinary()
+	if err != nil {
+		return
+	}
+	copy(data, b)
+	n += int(a.ActionHeader.Len())
+
+	binary.BigEndian.PutUint32(data[n:], a.MeterId)
+
+	return
+}
+func (a *ActionMeter) UnmarshalBinary(data []byte) error {
+	n := 0
+	err := a.ActionHeader.UnmarshalBinary(data[n:])
+	if err != nil {
+		return err
+	}
+	n += int(a.ActionHeader.Len())
+
+	a.MeterId = binary.BigEndian.Uint32(data[n:])
+	n += 4
+
+	return err
 }

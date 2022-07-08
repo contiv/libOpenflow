@@ -8,6 +8,8 @@ import (
 	"sync/atomic"
 
 	"antrea.io/libOpenflow/util"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var messageXid uint32 = 1
@@ -60,6 +62,8 @@ func (h *Header) UnmarshalBinary(data []byte) error {
 	h.Type = data[1]
 	h.Length = binary.BigEndian.Uint16(data[2:4])
 	h.Xid = binary.BigEndian.Uint32(data[4:8])
+
+	log.Debugf("Header: %+v", h)
 	return nil
 }
 
@@ -118,8 +122,8 @@ func NewHelloElemVersionBitmap() *HelloElemVersionBitmap {
 	h := new(HelloElemVersionBitmap)
 	h.HelloElemHeader = *NewHelloElemHeader()
 	h.Bitmaps = make([]uint32, 0)
-	// 10010 meaning openflow 1.0 & 1.3 support
-	h.Bitmaps = append(h.Bitmaps, uint32(1<<4)|uint32(1<<1))
+	// 0100 0010 meaning openflow 1.0 & 1.5 support
+	h.Bitmaps = append(h.Bitmaps, uint32(1<<6)|uint32(1<<1))
 	h.Length = h.Length + uint16(len(h.Bitmaps)*4)
 	return h
 }

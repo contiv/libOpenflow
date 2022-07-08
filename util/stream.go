@@ -133,14 +133,14 @@ func (m *MessageStream) outbound() {
 
 // Handle inbound messages
 func (m *MessageStream) inbound() {
-	msg := 0
+	msgLen := 0
 	hdr := 0
 	hdrBuf := make([]byte, 4)
 
-	tmp := make([]byte, 2048)
+	tmpBuf := make([]byte, 2048)
 	buf := <-m.pool.Empty
 	for {
-		n, err := m.conn.Read(tmp)
+		n, err := m.conn.Read(tmpBuf)
 		if err != nil {
 			// Handle explicitly disconnecting by closing connection
 			if strings.Contains(err.Error(), "use of closed network connection") {
@@ -154,18 +154,20 @@ func (m *MessageStream) inbound() {
 
 		for i := 0; i < n; i++ {
 			if hdr < 4 {
-				hdrBuf[hdr] = tmp[i]
-				buf.WriteByte(tmp[i])
+				hdrBuf[hdr] = tmpBuf[i]
+				buf.WriteByte(tmpBuf[i])
 				hdr += 1
 				if hdr >= 4 {
-					msg = int(binary.BigEndian.Uint16(hdrBuf[2:])) - 4
+					// MessageStream is not protocol agnostic. Reading length based
+					// on OpenFlow header field.
+					msgLen = int(binary.BigEndian.Uint16(hdrBuf[2:])) - 4
 				}
 				continue
 			}
-			if msg > 0 {
-				buf.WriteByte(tmp[i])
-				msg = msg - 1
-				if msg == 0 {
+			if msgLen > 0 {
+				buf.WriteByte(tmpBuf[i])
+				msgLen = msgLen - 1
+				if msgLen == 0 {
 					hdr = 0
 					m.dispatchMessage(buf)
 					buf = <-m.pool.Empty
