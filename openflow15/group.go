@@ -21,6 +21,15 @@ const (
 )
 
 const (
+	OFPG_BUCKET_MAX   = 0xffffff00 /* Last usable bucket ID. */
+	OFPG_BUCKET_FIRST = 0xfffffffd /* First bucket ID in the list of action buckets of a group. This is applicable
+	for OFPGC_INSERT_BUCKET and OFPGC_REMOVE_BUCKET commands. */
+	OFPG_BUCKET_LAST = 0xfffffffe /* Last bucket ID in the list of action buckets of a group. This is applicable
+	for OFPGC_INSERT_BUCKET and OFPGC_REMOVE_BUCKET commands. */
+	OFPG_BUCKET_ALL = 0xffffffff /* All action buckets in a group. This is applicable for only OFPGC_REMOVE_BUCKET command. */
+)
+
+const (
 	OFPGC_ADD           = 0 /* New group. */
 	OFPGC_MODIFY        = 1 /* Modify all matching groups. */
 	OFPGC_DELETE        = 2 /* Delete all matching groups. */
