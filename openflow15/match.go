@@ -4,8 +4,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 	"net"
+
+	"k8s.io/klog/v2"
 
 	"antrea.io/libOpenflow/util"
 )
@@ -91,6 +92,7 @@ func (m *Match) UnmarshalBinary(data []byte) error {
 	for n < int(m.Length) {
 		field := new(MatchField)
 		if err := field.UnmarshalBinary(data[n:]); err != nil {
+			klog.ErrorS(err, "Failed to unmarshal MatchField", "data", data[n:])
 			return err
 		}
 		m.Fields = append(m.Fields, *field)
@@ -183,12 +185,14 @@ func (m *MatchField) UnmarshalBinary(data []byte) error {
 	}
 
 	if m.Value, err = DecodeMatchField(m.Class, m.Field, m.Length, m.HasMask, data[n:]); err != nil {
+		klog.ErrorS(err, "Failed to decode MatchField", "data", data[n:])
 		return err
 	}
 	n += m.Value.Len()
 
 	if m.HasMask {
 		if m.Mask, err = DecodeMatchField(m.Class, m.Field, m.Length, m.HasMask, data[n:]); err != nil {
+			klog.ErrorS(err, "Failed to decode MatchField mask", "data", data[n:])
 			return err
 		}
 		n += m.Mask.Len()
@@ -407,16 +411,14 @@ func DecodeMatchField(class uint16, field uint8, length uint8, hasMask bool, dat
 		case OXM_FIELD_TCP_FLAGS:
 			val = new(TcpFlagsField)
 		default:
-			log.Printf("Unhandled Field: %d in Class: %d", field, class)
-		}
-
-		if val == nil {
-			log.Printf("Bad pkt class: %v field: %v data: %v", class, field, data)
-			return nil, fmt.Errorf("Bad pkt class: %v field: %v data: %v", class, field, data)
+			err := fmt.Errorf("unhandled Field: %d in Class: %d", field, class)
+			klog.ErrorS(err, "Received bad pkt class", "data", data)
+			return nil, err
 		}
 
 		err := val.UnmarshalBinary(data)
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal Oxm Field", "data", data)
 			return nil, err
 		}
 		return val, nil
@@ -557,12 +559,14 @@ func DecodeMatchField(class uint16, field uint8, length uint8, hasMask bool, dat
 			}
 			val = msg
 		default:
-			log.Printf("Unhandled Field: %d in Class: %d", field, class)
-			return nil, fmt.Errorf("Bad pkt class: %v field: %v data: %v", class, field, data)
+			err := fmt.Errorf("unknown field for nxm_1: %v", field)
+			klog.ErrorS(err, "Received invalid field", "data", data)
+			return nil, err
 		}
 
 		err := val.UnmarshalBinary(data)
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal Nxm Field", "data", data)
 			return nil, err
 		}
 		return val, nil
@@ -592,11 +596,13 @@ func DecodeMatchField(class uint16, field uint8, length uint8, hasMask bool, dat
 			}
 			val = msg
 		default:
-			log.Printf("Unhandled Field: %d in Packet Register Class: %d", field, class)
-			return nil, fmt.Errorf("Bad pkt class: %v field: %v", class, field)
+			err := fmt.Errorf("unknown field for packet_regs: %v", field)
+			klog.ErrorS(err, "Received invalid field", "data", data)
+			return nil, err
 		}
 		err := val.UnmarshalBinary(data)
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal Oxm Field", "data", data)
 			return nil, err
 		}
 		return val, nil
@@ -607,9 +613,14 @@ func DecodeMatchField(class uint16, field uint8, length uint8, hasMask bool, dat
 			val = new(TcpFlagsField)
 		case OXM_FIELD_ACTSET_OUTPUT:
 			val = new(ActsetOutputField)
+		default:
+			err := fmt.Errorf("unknown field for experimenter: %v", field)
+			klog.ErrorS(err, "Received invalid field", "data", data)
+			return nil, err
 		}
 		err := val.UnmarshalBinary(data)
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal Oxm Field", "data", data)
 			return nil, err
 		}
 		return val, nil

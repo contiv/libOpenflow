@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
+	"k8s.io/klog/v2"
 
 	"antrea.io/libOpenflow/common"
 	"antrea.io/libOpenflow/util"
@@ -51,7 +51,7 @@ func (s *MultipartRequest) MarshalBinary() (data []byte, err error) {
 		data = append(data, b...)
 	}
 
-	log.Debugf("Sending MultipartRequest (%d): %v", len(data), data)
+	klog.V(4).InfoS("Sending MultipartRequest succeeded", "dataLength", len(data), "data", data)
 
 	return
 }
@@ -134,6 +134,7 @@ func (s *MultipartRequest) UnmarshalBinary(data []byte) error {
 		if req != nil {
 			err = req.UnmarshalBinary(data[n:])
 			if err != nil {
+				klog.ErrorS(err, "Failed to unmarshal MultipartRequest's Body", "data", data[n:])
 				return err
 			}
 			n += req.Len()
@@ -283,7 +284,7 @@ func (s *MultipartReply) UnmarshalBinary(data []byte) error {
 
 		err = repl.UnmarshalBinary(data[n:])
 		if err != nil {
-			log.Printf("Error parsing stats reply")
+			klog.ErrorS(err, "Failed to unmarshal MultipartReply's Body", "data", data[n:])
 			return err
 		}
 		if repl == nil {
@@ -568,6 +569,10 @@ func (s *FlowStatsRequest) UnmarshalBinary(data []byte) error {
 	n += 8
 
 	err := s.Match.UnmarshalBinary(data[n:])
+	if err != nil {
+		klog.ErrorS(err, "Failed to unmarshal FlowStatsRequest's Match", "data", data[n:])
+		return err
+	}
 	n += int(s.Match.Len())
 
 	return err
@@ -645,6 +650,7 @@ func (s *FlowStats) UnmarshalBinary(data []byte) error {
 	n += 2
 	err := s.Match.UnmarshalBinary(data[n:])
 	if err != nil {
+		klog.ErrorS(err, "Failed to unmarshal FlowStats's Match", "data", data[n:])
 		return err
 	}
 	n += s.Match.Len()
@@ -653,6 +659,7 @@ func (s *FlowStats) UnmarshalBinary(data []byte) error {
 		stat := new(Stats)
 		err = stat.UnmarshalBinary(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal FlowStats's Stat", "data", data[n:])
 			return err
 		}
 		s.Stats = append(s.Stats, *stat)
@@ -728,7 +735,11 @@ func (s *AggregateStatsRequest) UnmarshalBinary(data []byte) error {
 	s.CookieMask = binary.BigEndian.Uint64(data[n:])
 	n += 8
 
-	s.Match.UnmarshalBinary(data[n:])
+	err := s.Match.UnmarshalBinary(data[n:])
+	if err != nil {
+		klog.ErrorS(err, "Failed to unmarshal AggregateStatsRequest's Match", "data", data[n:])
+		return err
+	}
 	n += int(s.Match.Len())
 	return nil
 }
@@ -998,6 +1009,7 @@ func (s *PortStats) UnmarshalBinary(data []byte) (err error) {
 		}
 		err = p.UnmarshalBinary(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal PortStats's Properties", "data", data[n:])
 			return err
 		}
 		n += p.Len()
@@ -1325,6 +1337,7 @@ func (s *QueueStats) UnmarshalBinary(data []byte) (err error) {
 		}
 		err = p.UnmarshalBinary(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal QueueStats's Properties", "data", data[n:])
 			return err
 		}
 		n += p.Len()
@@ -1508,6 +1521,7 @@ func (p *InstructionProperty) UnmarshalBinary(data []byte) error {
 		instr := new(InstructionId)
 		err := instr.UnmarshalBinary(data[n : n+4])
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal InstructionProperty's Instructions", "data", data[n:])
 			return err
 		}
 		p.Instructions = append(p.Instructions, *instr)
@@ -1668,6 +1682,7 @@ func (p *ActionProperty) UnmarshalBinary(data []byte) error {
 		act := new(ActionId)
 		err := act.UnmarshalBinary(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal ActionProperty's Actions", "data", data[n:])
 			return err
 		}
 		p.Actions = append(p.Actions, *act)
@@ -2028,6 +2043,7 @@ func (f *TableFeatures) UnmarshalBinary(data []byte) error {
 		}
 		err := p.UnmarshalBinary(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal TableFeatures's Properties", "data", data[n:])
 			return err
 		}
 		f.Properties = append(f.Properties, p)
@@ -2157,21 +2173,27 @@ func (f *FlowDesc) UnmarshalBinary(data []byte) (err error) {
 
 	err = f.Match.UnmarshalBinary(data[n:])
 	if err != nil {
+		klog.ErrorS(err, "Failed to unmarshal FlowDesc's Match", "data", data[n:])
 		return
 	}
 	m_len := f.Match.Len()
-	log.Debugf("Match Len : %d", m_len)
+	klog.V(4).InfoS("Match Len", "value", m_len)
 	n += m_len
 
-	log.Debugf("Data passed to Stats UnmarshalBinary: %x", data[n:])
+	klog.V(4).InfoS("Data passed to Stats UnmarshalBinary", "data", data[n:])
 	err = f.Stats.UnmarshalBinary(data[n:])
 	if err != nil {
+		klog.ErrorS(err, "Failed to unmarshal FlowDesc's Stats", "data", data[n:])
 		return
 	}
 	n += f.Stats.Len()
 
 	for n < f.Length {
-		i := DecodeInstr(data[n:])
+		i, err := DecodeInstr(data[n:])
+		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal FlowDesc's Instructions", "data", data[n:])
+			return err
+		}
 		f.Instructions = append(f.Instructions, i)
 		n += i.Len()
 	}
@@ -2303,6 +2325,7 @@ func (g *GroupStats) UnmarshalBinary(data []byte) (err error) {
 		b := new(BucketCounter)
 		err = b.UnmarshalBinary(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal GroupStats's Stats", "data", data[n:])
 			return
 		}
 		g.Stats = append(g.Stats, *b)
@@ -2438,6 +2461,7 @@ func (g *GroupDesc) UnmarshalBinary(data []byte) (err error) {
 		b := new(Bucket)
 		err = b.UnmarshalBinary(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal GroupDesc's Buckets", "data", data[n:])
 			return
 		}
 		g.Buckets = append(g.Buckets, *b)
@@ -2455,6 +2479,7 @@ func (g *GroupDesc) UnmarshalBinary(data []byte) (err error) {
 		}
 		err = p.UnmarshalBinary(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal GroupDesc's Properties", "data", data[n:])
 			return err
 		}
 		n += p.Len()
@@ -2645,6 +2670,7 @@ func (m *MeterStats) UnmarshalBinary(data []byte) (err error) {
 		stats := new(MeterBandStats)
 		err = stats.UnmarshalBinary(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal MeterStats's BandStats", "data", data[n:])
 			return err
 		}
 		m.BandStats = append(m.BandStats, *stats)
@@ -2762,6 +2788,7 @@ func (m *MeterDesc) UnmarshalBinary(data []byte) (err error) {
 		}
 		err = p.UnmarshalBinary(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal MeterDesc's Bands", "data", data[n:])
 			return
 		}
 		m.Bands = append(m.Bands, p)
@@ -2942,6 +2969,7 @@ func (q *QueueDesc) UnmarshalBinary(data []byte) (err error) {
 		}
 		err = p.UnmarshalBinary(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal QueueDesc's Properties", "data", data[n:])
 			return err
 		}
 		n += p.Len()
@@ -3091,6 +3119,7 @@ func (mon *FlowMonitorRequest) UnmarshalBinary(data []byte) (err error) {
 
 	err = mon.Match.UnmarshalBinary(data[n:])
 	if err != nil {
+		klog.ErrorS(err, "Failed to unmarshal FlowMonitorRequest's Match", "data", data[n:])
 		return
 	}
 	return
@@ -3263,11 +3292,16 @@ func (full *FlowUpdateFull) UnmarshalBinary(data []byte) (err error) {
 
 	err = full.Match.UnmarshalBinary(data[n:])
 	if err != nil {
+		klog.ErrorS(err, "Failed to unmarshal FlowUpdateFull's Match", "data", data[n:])
 		return
 	}
 	n += full.Match.Len()
 	for n < full.FlowUpdateHeader.Length {
-		i := DecodeInstr(data[n:])
+		i, err := DecodeInstr(data[n:])
+		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal FlowUpdateFull's Instructions", "data", data[n:])
+			return err
+		}
 		full.Instructions = append(full.Instructions, i)
 		n += i.Len()
 	}
@@ -3409,6 +3443,7 @@ func (b *BundleFeaturesRequest) UnmarshalBinary(data []byte) (err error) {
 		}
 		err = p.UnmarshalBinary(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal BundleFeaturesRequest's Properties", "data", data[n:])
 			return err
 		}
 		n += p.Len()
@@ -3498,6 +3533,7 @@ func (prop *BundleFeaturesPropTime) UnmarshalBinary(data []byte) (err error) {
 	var n uint16
 	err = prop.Header.UnmarshalBinary(data[n:])
 	if err != nil {
+		klog.ErrorS(err, "Failed to unmarshal BundleFeaturesPropTime's Header", "data", data[n:])
 		return
 	}
 	n += prop.Header.Len()
@@ -3505,24 +3541,28 @@ func (prop *BundleFeaturesPropTime) UnmarshalBinary(data []byte) (err error) {
 
 	err = prop.SchedAccuracy.UnmarshalBinary(data[n:])
 	if err != nil {
+		klog.ErrorS(err, "Failed to unmarshal BundleFeaturesPropTime's SchedAccuracy", "data", data[n:])
 		return
 	}
 	n += prop.SchedAccuracy.Len()
 
 	err = prop.SchedMaxFuture.UnmarshalBinary(data[n:])
 	if err != nil {
+		klog.ErrorS(err, "Failed to unmarshal BundleFeaturesPropTime's SchedMaxFuture", "data", data[n:])
 		return
 	}
 	n += prop.SchedMaxFuture.Len()
 
 	err = prop.SchedMaxPast.UnmarshalBinary(data[n:])
 	if err != nil {
+		klog.ErrorS(err, "Failed to unmarshal BundleFeaturesPropTime's SchedMaxPast", "data", data[n:])
 		return
 	}
 	n += prop.SchedMaxPast.Len()
 
 	err = prop.Timestamp.UnmarshalBinary(data[n:])
 	if err != nil {
+		klog.ErrorS(err, "Failed to unmarshal BundleFeaturesPropTime's Timestamp", "data", data[n:])
 		return
 	}
 	n += prop.Timestamp.Len()
@@ -3590,6 +3630,7 @@ func (b *BundleFeatures) UnmarshalBinary(data []byte) (err error) {
 		}
 		err = p.UnmarshalBinary(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal BundleFeatures's Properties", "data", data[n:])
 			return err
 		}
 		n += p.Len()

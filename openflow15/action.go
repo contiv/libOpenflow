@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"k8s.io/klog/v2"
+
 	"antrea.io/libOpenflow/util"
 )
 
@@ -71,6 +73,7 @@ func (a *ActionHeader) UnmarshalBinary(data []byte) error {
 func DecodeAction(data []byte) (Action, error) {
 	t := binary.BigEndian.Uint16(data[:2])
 	var a Action
+	var err error
 	switch t {
 	case ActionType_Output:
 		a = new(ActionOutput)
@@ -116,13 +119,18 @@ func DecodeAction(data []byte) (Action, error) {
 		}
 		v := binary.BigEndian.Uint32(data[4:8])
 		if v == NxExperimenterID {
-			a = DecodeNxAction(data)
+			a, err = DecodeNxAction(data)
+			if err != nil {
+				klog.ErrorS(err, "Failed to decode NxAction", "data", data)
+				return nil, err
+			}
 		}
 	default:
 		return nil, fmt.Errorf("DecodeAction unknown type: %v", t)
 	}
-	err := a.UnmarshalBinary(data)
+	err = a.UnmarshalBinary(data)
 	if err != nil {
+		klog.ErrorS(err, "Failed to unmarshal", "structure", a, "data", data)
 		return a, err
 	}
 	return a, nil

@@ -4,8 +4,9 @@ package openflow15
 
 import (
 	"encoding/binary"
+	"fmt"
 
-	log "github.com/sirupsen/logrus"
+	"k8s.io/klog/v2"
 
 	"antrea.io/libOpenflow/common"
 	"antrea.io/libOpenflow/util"
@@ -269,10 +270,10 @@ func (m *MeterMod) MarshalBinary() (data []byte, err error) {
 		}
 		copy(data[n:], mbBytes)
 		n += METER_BAND_LEN
-		log.Debugf("Metermod band: %v", mbBytes)
+		klog.V(4).InfoS("Metermod band", "bytes", mbBytes)
 	}
 
-	log.Debugf("Metermod(%d): %v", len(data), data)
+	klog.V(4).InfoS("Metermod MarshalBinary succeeded", "dataLength", len(data), "data", data)
 
 	return
 }
@@ -291,7 +292,11 @@ func (m *MeterMod) UnmarshalBinary(data []byte) error {
 
 	for n < int(m.Header.Length) {
 		mbh := new(MeterBandHeader)
-		mbh.UnmarshalBinary(data[n:])
+		err := mbh.UnmarshalBinary(data[n:])
+		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal MeterMod's MeterBandHeader", "data", data[n:])
+			return err
+		}
 		n += int(mbh.Len())
 		switch mbh.Type {
 		case MBT_DROP:
@@ -308,6 +313,8 @@ func (m *MeterMod) UnmarshalBinary(data []byte) error {
 			mbExp.MeterBandHeader = *mbh
 			mbExp.Experimenter = binary.BigEndian.Uint32(data[n:])
 			m.MeterBands = append(m.MeterBands, mbExp)
+		default:
+			return fmt.Errorf("unknown MeterBandHeader type : %v", mbh.Type)
 		}
 		n += 4
 	}

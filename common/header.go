@@ -7,9 +7,9 @@ import (
 	"errors"
 	"sync/atomic"
 
-	"antrea.io/libOpenflow/util"
+	"k8s.io/klog/v2"
 
-	log "github.com/sirupsen/logrus"
+	"antrea.io/libOpenflow/util"
 )
 
 var messageXid uint32 = 1
@@ -63,7 +63,7 @@ func (h *Header) UnmarshalBinary(data []byte) error {
 	h.Length = binary.BigEndian.Uint16(data[2:4])
 	h.Xid = binary.BigEndian.Uint32(data[4:8])
 
-	log.Debugf("Header: %+v", h)
+	klog.V(4).InfoS("UnmarshalBinary", "Header", h)
 	return nil
 }
 

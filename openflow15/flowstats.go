@@ -2,11 +2,11 @@ package openflow15
 
 import (
 	"encoding/binary"
-	"errors"
+	"fmt"
+
+	"k8s.io/klog/v2"
 
 	"antrea.io/libOpenflow/util"
-
-	"github.com/sirupsen/logrus"
 )
 
 // ofp_stats
@@ -53,35 +53,34 @@ func (s *Stats) MarshalBinary() (data []byte, err error) {
 }
 
 func (s *Stats) UnmarshalBinary(data []byte) (err error) {
-	logrus.Debugf("Stats Data: %x", data)
+	klog.V(4).Infof("Stats Data: %x", data)
 	n := 2 // 2 bytes Reserved
 	s.Length = binary.BigEndian.Uint16(data[n:])
 	n += 2
-	logrus.Debugf("Stats Length: %d", s.Length)
+	klog.V(4).Infof("Stats Length: %d", s.Length)
 	for n < int(s.Length) {
 		var f util.Message
-		logrus.Debugf("Stats Field: %d", data[n+2]>>1)
+		klog.V(4).InfoS("Stats Field", "value", data[n+2]>>1)
 		switch data[n+2] >> 1 {
 		case XST_OFB_DURATION:
 			fallthrough
 		case XST_OFB_IDLE_TIME:
-			logrus.Debugf("Received TimeStatField n:%d", n)
+			klog.V(4).InfoS("Received TimeStatField", "offset", n)
 			f = new(TimeStatField)
 		case XST_OFB_FLOW_COUNT:
-			logrus.Debugf("Received FlowCountStatField n:%d", n)
+			klog.V(4).InfoS("Received FlowCountStatField", "offset", n)
 			f = new(FlowCountStatField)
 		case XST_OFB_PACKET_COUNT:
 			fallthrough
 		case XST_OFB_BYTE_COUNT:
-			logrus.Debugf("Received PBCountStatField n:%d", n)
+			klog.V(4).InfoS("Received PBCountStatField", "offset", n)
 			f = new(PBCountStatField)
 		default:
-			logrus.Debugf("Received Unknown field: %d", data[n+2])
-			err = errors.New("Unknown type received for the Stats Field")
-			return
+			return fmt.Errorf("Received unknown Stats field: %v", data[n+2]>>1)
 		}
 		err = f.UnmarshalBinary(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal Stats's Field", "data", data[n:])
 			return
 		}
 		n += int(f.Len())
@@ -186,7 +185,7 @@ func (f *TimeStatField) UnmarshalBinary(data []byte) (err error) {
 		return
 	}
 	n := f.Header.Len()
-	logrus.Debugf("Header Len: %d", n)
+	klog.V(4).Info("Header Len: %d", n)
 	f.Sec = binary.BigEndian.Uint32(data[n:])
 	n += 4
 	f.NSec = binary.BigEndian.Uint32(data[n:])

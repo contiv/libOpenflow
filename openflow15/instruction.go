@@ -5,8 +5,11 @@ package openflow15
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 
 	"antrea.io/libOpenflow/util"
+
+	"k8s.io/klog/v2"
 )
 
 // ofp_instruction_type 1.5
@@ -53,7 +56,10 @@ func (a *InstrHeader) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-func DecodeInstr(data []byte) Instruction {
+func DecodeInstr(data []byte) (Instruction, error) {
+	if len(data) < 2 {
+		return nil, errors.New("data too short to decode Instruction")
+	}
 	t := binary.BigEndian.Uint16(data[:2])
 	var a Instruction
 	switch t {
@@ -70,10 +76,16 @@ func DecodeInstr(data []byte) Instruction {
 	case InstrType_DEPRECATED:
 	case InstrType_STAT_TRIGGER:
 	case InstrType_EXPERIMENTER:
+	default:
+		return nil, fmt.Errorf("unknown Instrheader type: %v", t)
 	}
 
-	a.UnmarshalBinary(data)
-	return a
+	err := a.UnmarshalBinary(data)
+	if err != nil {
+		klog.ErrorS(err, "Failed to unmarshal Instruction", "data", data)
+		return nil, err
+	}
+	return a, nil
 }
 
 type InstrGotoTable struct {
@@ -208,6 +220,7 @@ func (instr *InstrActions) UnmarshalBinary(data []byte) error {
 	for n < int(instr.Length) {
 		act, err := DecodeAction(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to decode InstrActions's Actions", "data", data[n:])
 			return err
 		}
 		instr.Actions = append(instr.Actions, act)
@@ -296,8 +309,11 @@ func (instr *InstrStatTrigger) MarshalBinary() (data []byte, err error) {
 func (instr *InstrStatTrigger) UnmarshalBinary(data []byte) error {
 	instr.InstrHeader.UnmarshalBinary(data[:4])
 	instr.Flags = binary.BigEndian.Uint32(data[4:8])
-	instr.Thresholds.UnmarshalBinary(data[8:])
-
+	err := instr.Thresholds.UnmarshalBinary(data[8:])
+	if err != nil {
+		klog.ErrorS(err, "Failed to marshal InstrStatTrigger's Thresholds", "data", data[8:])
+		return err
+	}
 	return nil
 }
 

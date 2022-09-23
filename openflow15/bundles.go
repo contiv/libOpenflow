@@ -3,7 +3,10 @@ package openflow15
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"unsafe"
+
+	"k8s.io/klog/v2"
 
 	"antrea.io/libOpenflow/util"
 )
@@ -223,7 +226,7 @@ func (b *BundleAdd) UnmarshalBinary(data []byte) error {
 	n += 2
 	b.Message, err = Parse(data[n:])
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse BundleAdd's Message: %v", err)
 	}
 	n += int(b.Message.Len())
 	if n < len(data) {
@@ -232,6 +235,7 @@ func (b *BundleAdd) UnmarshalBinary(data []byte) error {
 			var property BundlePropertyExperimenter
 			err = property.UnmarshalBinary(data[n:])
 			if err != nil {
+				klog.ErrorS(err, "Failed to unmarshal BundlePropertyExperimenter", "data", data)
 				return err
 			}
 			b.Properties = append(b.Properties, property)
@@ -302,6 +306,7 @@ func (e *VendorError) UnmarshalBinary(data []byte) error {
 	n += 4
 	err = e.Data.UnmarshalBinary(data[n:])
 	if err != nil {
+		klog.ErrorS(err, "Failed to unmarshal VendorError's Data", "data", data)
 		return err
 	}
 	n += int(e.Data.Len())

@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"errors"
 
+	"k8s.io/klog/v2"
+
 	"antrea.io/libOpenflow/protocol"
 	"antrea.io/libOpenflow/util"
 )
@@ -196,6 +198,7 @@ func (t *TLVTableMod) UnmarshalBinary(data []byte) error {
 		tlvMap := new(TLVTableMap)
 		err := tlvMap.UnmarshalBinary(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal TLVTableMod's TlvMaps", "data", data[n:])
 			return err
 		}
 		n += int(tlvMap.Len())
@@ -264,6 +267,7 @@ func (t *TLVTableReply) UnmarshalBinary(data []byte) error {
 		tlvMap := new(TLVTableMap)
 		err := tlvMap.UnmarshalBinary(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal TLVTableReply's TlvMaps", "data", data[n:])
 			return err
 		}
 		n += int(tlvMap.Len())
@@ -607,7 +611,8 @@ func (p *ContinuationPropActions) UnmarshalBinary(data []byte) error {
 	for n < int(p.Length) {
 		act, err := DecodeAction(data[n:])
 		if err != nil {
-			return errors.New("failed to decode actions")
+			klog.ErrorS(err, "Failed to decode ContinuationPropActions's Actions", "data", data[n:])
+			return err
 		}
 		p.Actions = append(p.Actions, act)
 		n += int(act.Len())
@@ -670,7 +675,8 @@ func (p *ContinuationPropActionSet) UnmarshalBinary(data []byte) error {
 	for n < int(p.Length) {
 		act, err := DecodeAction(data[n:])
 		if err != nil {
-			return errors.New("failed to decode actions")
+			klog.ErrorS(err, "Failed to decode ContinuationPropActionSet's ActionSet", "data", data[n:])
+			return err
 		}
 		p.ActionSet = append(p.ActionSet, act)
 		n += int(act.Len())
@@ -746,6 +752,7 @@ func DecodeContinuationProp(data []byte) (Property, error) {
 	}
 	err := p.UnmarshalBinary(data)
 	if err != nil {
+		klog.ErrorS(err, "Failed to unmarshal ContinuationProp", "data", data)
 		return p, err
 	}
 	return p, nil
@@ -816,6 +823,7 @@ func (p *PacketIn2PropPacket) UnmarshalBinary(data []byte) error {
 	n += int(p.PropHeader.Len())
 
 	if err := p.Packet.UnmarshalBinary(data[n:p.Length]); err != nil {
+		klog.ErrorS(err, "Failed to unmarshal PacketIn2PropPacket's Packet", "data", data[n:p.Length])
 		return err
 	}
 	return nil
@@ -1093,6 +1101,7 @@ func (p *PacketIn2PropMetadata) UnmarshalBinary(data []byte) error {
 	for n < int(p.Length) {
 		field := new(MatchField)
 		if err := field.UnmarshalBinary(data[n:]); err != nil {
+			klog.ErrorS(err, "Failed to unmarshal PacketIn2PropMetadata's Fields", "data", data[n:])
 			return err
 		}
 		p.Fields = append(p.Fields, *field)
@@ -1216,6 +1225,7 @@ func DecodePacketIn2Prop(data []byte) (Property, error) {
 	}
 	err := p.UnmarshalBinary(data)
 	if err != nil {
+		klog.ErrorS(err, "Failed to unmarshal PacketIn2Prop", "data", data)
 		return p, err
 	}
 	return p, nil
@@ -1341,6 +1351,7 @@ func decodeVendorData(experimenterType uint32, data []byte) (msg util.Message, e
 	}
 	err = msg.UnmarshalBinary(data)
 	if err != nil {
+		klog.ErrorS(err, "Failed to decode VendorData", "data", data)
 		return nil, err
 	}
 	return msg, err

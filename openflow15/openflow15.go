@@ -13,10 +13,10 @@ import (
 	"errors"
 	"net"
 
+	"k8s.io/klog/v2"
+
 	"antrea.io/libOpenflow/common"
 	"antrea.io/libOpenflow/util"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -112,6 +112,7 @@ const (
 )
 
 func Parse(b []byte) (message util.Message, err error) {
+	klog.V(4).InfoS("Openflow15 parse", "bytes", b)
 	switch b[1] {
 	case Type_Error:
 		errMsg := new(ErrorMsg)
@@ -197,6 +198,7 @@ func Parse(b []byte) (message util.Message, err error) {
 	if message != nil {
 		err = message.UnmarshalBinary(b)
 	}
+	klog.V(4).InfoS("Parsing result", "error", err, "message", message)
 	return
 }
 
@@ -303,6 +305,7 @@ func (p *PacketOut) UnmarshalBinary(data []byte) (err error) {
 	n += 2 // for pad
 
 	if err = p.Match.UnmarshalBinary(data[n:]); err != nil {
+		klog.ErrorS(err, "Failed to unmarshal PacketOut's Match", "data", data[n:])
 		return err
 	}
 	n += p.Match.Len()
@@ -310,6 +313,7 @@ func (p *PacketOut) UnmarshalBinary(data []byte) (err error) {
 	for n < (a + p.ActionsLen) {
 		a, err := DecodeAction(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to decode PacketOut's Actions", "data", data[n:])
 			return err
 		}
 		p.Actions = append(p.Actions, a)
@@ -317,6 +321,9 @@ func (p *PacketOut) UnmarshalBinary(data []byte) (err error) {
 	}
 
 	err = p.Data.UnmarshalBinary(data[n:])
+	if err != nil {
+		klog.ErrorS(err, "Failed to unmarshal PacketOut's Data", "data", data[n:])
+	}
 	return err
 }
 
@@ -415,6 +422,7 @@ func (p *PacketIn) UnmarshalBinary(data []byte) error {
 	n += 8
 
 	if err := p.Match.UnmarshalBinary(data[n:]); err != nil {
+		klog.ErrorS(err, "Failed to unmarshal PacketIn's Match", "data", data[n:])
 		return err
 	}
 	n += p.Match.Len()
@@ -423,6 +431,9 @@ func (p *PacketIn) UnmarshalBinary(data []byte) error {
 	n += 2
 
 	err = p.Data.UnmarshalBinary(data[n:])
+	if err != nil {
+		klog.ErrorS(err, "Failed to unmarshal PacketIn's Data", "data", data[n:])
+	}
 	return err
 }
 
@@ -565,15 +576,25 @@ func (e *ErrorMsg) MarshalBinary() (data []byte, err error) {
 
 func (e *ErrorMsg) UnmarshalBinary(data []byte) error {
 	n := 0
-	e.Header.UnmarshalBinary(data[n:])
+	err := e.Header.UnmarshalBinary(data[n:])
+	if err != nil {
+		return err
+	}
 	n += int(e.Header.Len())
 
+	if len(data) < int(e.Header.Length) || len(data) < int(n)+4 {
+		return errors.New("data too short to unmarshal ErrorMsg")
+	}
 	e.Type = binary.BigEndian.Uint16(data[n:])
 	n += 2
 	e.Code = binary.BigEndian.Uint16(data[n:])
 	n += 2
 
-	e.Data.UnmarshalBinary(data[n:])
+	err = e.Data.UnmarshalBinary(data[n:])
+	if err != nil {
+		klog.ErrorS(err, "Failed to unmarshal ErrorMsg's Data", "data", data[n:])
+		return err
+	}
 	n += int(e.Data.Len())
 	return nil
 }
@@ -1207,6 +1228,7 @@ func (a *Async_Config) UnmarshalBinary(data []byte) (err error) {
 		}
 		err = p.UnmarshalBinary(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal Async Config's Properties", "structure", p, "data", data[n:])
 			return err
 		}
 		n += p.Len()
@@ -1427,6 +1449,7 @@ func (r *RoleStatus) UnmarshalBinary(data []byte) (err error) {
 		}
 		err = p.UnmarshalBinary(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal RoleStatus's Properties", "data", data[n:])
 			return err
 		}
 		n += p.Len()
@@ -1608,6 +1631,7 @@ func (t *TableDesc) UnmarshalBinary(data []byte) (err error) {
 		}
 		err = p.UnmarshalBinary(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal TableDesc's Properties", "data", data[n:])
 			return err
 		}
 		n += p.Len()
@@ -1803,6 +1827,9 @@ func (t *TableStatus) UnmarshalBinary(data []byte) (err error) {
 	n += 7 //Pad
 
 	err = t.Table.UnmarshalBinary(data[n:])
+	if err != nil {
+		klog.ErrorS(err, "Failed to unmarshal TableStatus's Table", "data", data[n:])
+	}
 	return
 }
 
@@ -1893,6 +1920,7 @@ func (t *TableMod) UnmarshalBinary(data []byte) (err error) {
 		}
 		err = p.UnmarshalBinary(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal TableMod's Properties", "data", data[n:])
 			return err
 		}
 		n += p.Len()
@@ -1951,6 +1979,7 @@ func (r *RequestForward) UnmarshalBinary(data []byte) (err error) {
 
 	err = r.Request.UnmarshalBinary(data[n:])
 	if err != nil {
+		klog.ErrorS(err, "Failed to unmarshal RequestForward's Request", "data", data[n:])
 		return
 	}
 	n += r.Request.Len()
@@ -2074,6 +2103,7 @@ func (c *BundleCtrl) UnmarshalBinary(data []byte) (err error) {
 		}
 		err = p.UnmarshalBinary(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal BundleCtrl's Properties", "data", data[n:])
 			return err
 		}
 		n += p.Len()
@@ -2132,6 +2162,7 @@ func (t *BundlePropTime) UnmarshalBinary(data []byte) (err error) {
 
 	err = t.SchedTime.UnmarshalBinary(data[n:])
 	if err != nil {
+		klog.ErrorS(err, "Failed to unmarshal BundlePropTime's SchedTime", "data", data[n:])
 		return
 	}
 	n += t.SchedTime.Len()
@@ -2209,7 +2240,7 @@ func (c *BndleAdd) MarshalBinary() (data []byte, err error) {
 	if err != nil {
 		return
 	}
-	log.Debugf("BndleAdd MarshalBinary Header: %+v", c.Header)
+	klog.V(4).InfoS("BndleAdd MarshalBinary", "Header", c.Header)
 	var n uint16
 	copy(data[n:], b)
 	n = c.Header.Len()
@@ -2259,6 +2290,7 @@ func (c *BndleAdd) UnmarshalBinary(data []byte) (err error) {
 
 	c.Message, err = Parse(data[n:])
 	if err != nil {
+		klog.ErrorS(err, "Failed to parse BndleAdd's Message", "data", data[n:])
 		return
 	}
 	n += c.Message.Len()
@@ -2276,6 +2308,7 @@ func (c *BndleAdd) UnmarshalBinary(data []byte) (err error) {
 		}
 		err = p.UnmarshalBinary(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal BndleAdd's Properties", "data", data[n:])
 			return err
 		}
 		n += p.Len()
@@ -2336,6 +2369,9 @@ func (c *ControllerStatusHeader) UnmarshalBinary(data []byte) (err error) {
 	n = c.Header.Len()
 
 	err = c.Status.UnmarshalBinary(data[n:])
+	if err != nil {
+		klog.ErrorS(err, "Failed to unmarshal ControllerStatusHeader's Status", "data", data[n:])
+	}
 	return
 }
 
@@ -2430,6 +2466,7 @@ func (c *ControllerStatus) UnmarshalBinary(data []byte) (err error) {
 		}
 		err = p.UnmarshalBinary(data[n:])
 		if err != nil {
+			klog.ErrorS(err, "Failed to unmarshal ControllerStatus's Properties", "data", data[n:])
 			return err
 		}
 		n += p.Len()
