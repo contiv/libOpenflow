@@ -257,7 +257,7 @@ type NXActionConnTrack struct {
 	RecircTable  uint8
 	pad          []byte // 3bytes
 	Alg          uint16
-	actions      []Action
+	Actions      []Action
 }
 
 func (a *NXActionConnTrack) Len() (n uint16) {
@@ -285,7 +285,7 @@ func (a *NXActionConnTrack) MarshalBinary() (data []byte, err error) {
 	binary.BigEndian.PutUint16(data[n:], a.Alg)
 	n += 2
 	// Marshal ct actions
-	for _, action := range a.actions {
+	for _, action := range a.Actions {
 		actionBytes, err := action.MarshalBinary()
 		if err != nil {
 			return data, errors.New("failed to Marshal ct subActions")
@@ -323,7 +323,7 @@ func (a *NXActionConnTrack) UnmarshalBinary(data []byte) error {
 			klog.ErrorS(err, "Failed to decode NXActionConnTrack Actions", "data", data[n:])
 			return err
 		}
-		a.actions = append(a.actions, act)
+		a.Actions = append(a.Actions, act)
 		n += int(act.Len())
 	}
 	a.Length = uint16(n)
@@ -359,7 +359,7 @@ func (a *NXActionConnTrack) ZoneRange(field *MatchField, rng *NXRange) *NXAction
 
 func (a *NXActionConnTrack) AddAction(actions ...Action) *NXActionConnTrack {
 	for _, act := range actions {
-		a.actions = append(a.actions, act)
+		a.Actions = append(a.Actions, act)
 		a.Length += act.Len()
 	}
 	return a
@@ -669,14 +669,14 @@ type NXActionCTNAT struct {
 	*NXActionHeader
 	pad          []byte // 2 bytes
 	Flags        uint16 // nat Flags to identify snat/dnat, and nat algorithms: random/protocolHash, connection persistent
-	rangePresent uint16 // mark if has set nat range, including ipv4/ipv6 range, port range
+	RangePresent uint16 // mark if has set nat range, including ipv4/ipv6 range, port range
 
-	rangeIPv4Min  net.IP
-	rangeIPv4Max  net.IP
-	rangeIPv6Min  net.IP
-	rangeIPv6Max  net.IP
-	rangeProtoMin *uint16
-	rangeProtoMax *uint16
+	RangeIPv4Min  net.IP
+	RangeIPv4Max  net.IP
+	RangeIPv6Min  net.IP
+	RangeIPv6Max  net.IP
+	RangeProtoMin *uint16
+	RangeProtoMax *uint16
 }
 
 func NewNXActionCTNAT() *NXActionCTNAT {
@@ -706,31 +706,31 @@ func (a *NXActionCTNAT) MarshalBinary() (data []byte, err error) {
 	n += 2
 	binary.BigEndian.PutUint16(data[n:], a.Flags)
 	n += 2
-	binary.BigEndian.PutUint16(data[n:], a.rangePresent)
+	binary.BigEndian.PutUint16(data[n:], a.RangePresent)
 	n += 2
 
-	if a.rangeIPv4Min != nil {
-		copy(data[n:], a.rangeIPv4Min.To4())
+	if a.RangeIPv4Min != nil {
+		copy(data[n:], a.RangeIPv4Min.To4())
 		n += 4
 	}
-	if a.rangeIPv4Max != nil {
-		copy(data[n:], a.rangeIPv4Max.To4())
+	if a.RangeIPv4Max != nil {
+		copy(data[n:], a.RangeIPv4Max.To4())
 		n += 4
 	}
-	if a.rangeIPv6Min != nil {
-		copy(data[n:], a.rangeIPv6Min.To16())
+	if a.RangeIPv6Min != nil {
+		copy(data[n:], a.RangeIPv6Min.To16())
 		n += 16
 	}
-	if a.rangeIPv6Max != nil {
-		copy(data[n:], a.rangeIPv6Max.To16())
+	if a.RangeIPv6Max != nil {
+		copy(data[n:], a.RangeIPv6Max.To16())
 		n += 16
 	}
-	if a.rangeProtoMin != nil {
-		binary.BigEndian.PutUint16(data[n:], *a.rangeProtoMin)
+	if a.RangeProtoMin != nil {
+		binary.BigEndian.PutUint16(data[n:], *a.RangeProtoMin)
 		n += 2
 	}
-	if a.rangeProtoMin != nil {
-		binary.BigEndian.PutUint16(data[n:], *a.rangeProtoMax)
+	if a.RangeProtoMin != nil {
+		binary.BigEndian.PutUint16(data[n:], *a.RangeProtoMax)
 		n += 2
 	}
 
@@ -775,33 +775,33 @@ func (a *NXActionCTNAT) SetPersistent() error {
 }
 
 func (a *NXActionCTNAT) SetRangeIPv4Min(ipMin net.IP) {
-	a.rangeIPv4Min = ipMin
-	a.rangePresent |= NX_NAT_RANGE_IPV4_MIN
+	a.RangeIPv4Min = ipMin
+	a.RangePresent |= NX_NAT_RANGE_IPV4_MIN
 	a.Length += 4
 }
 func (a *NXActionCTNAT) SetRangeIPv4Max(ipMax net.IP) {
-	a.rangeIPv4Max = ipMax
-	a.rangePresent |= NX_NAT_RANGE_IPV4_MAX
+	a.RangeIPv4Max = ipMax
+	a.RangePresent |= NX_NAT_RANGE_IPV4_MAX
 	a.Length += 4
 }
 func (a *NXActionCTNAT) SetRangeIPv6Min(ipMin net.IP) {
-	a.rangeIPv6Min = ipMin
-	a.rangePresent |= NX_NAT_RANGE_IPV6_MIN
+	a.RangeIPv6Min = ipMin
+	a.RangePresent |= NX_NAT_RANGE_IPV6_MIN
 	a.Length += 16
 }
 func (a *NXActionCTNAT) SetRangeIPv6Max(ipMax net.IP) {
-	a.rangeIPv6Max = ipMax
-	a.rangePresent |= NX_NAT_RANGE_IPV6_MAX
+	a.RangeIPv6Max = ipMax
+	a.RangePresent |= NX_NAT_RANGE_IPV6_MAX
 	a.Length += 16
 }
 func (a *NXActionCTNAT) SetRangeProtoMin(protoMin *uint16) {
-	a.rangeProtoMin = protoMin
-	a.rangePresent |= NX_NAT_RANGE_PROTO_MIN
+	a.RangeProtoMin = protoMin
+	a.RangePresent |= NX_NAT_RANGE_PROTO_MIN
 	a.Length += 2
 }
 func (a *NXActionCTNAT) SetRangeProtoMax(protoMax *uint16) {
-	a.rangeProtoMax = protoMax
-	a.rangePresent |= NX_NAT_RANGE_PROTO_MAX
+	a.RangeProtoMax = protoMax
+	a.RangePresent |= NX_NAT_RANGE_PROTO_MAX
 	a.Length += 2
 }
 
@@ -817,34 +817,34 @@ func (a *NXActionCTNAT) UnmarshalBinary(data []byte) error {
 	n += 2
 	a.Flags = binary.BigEndian.Uint16(data[n:])
 	n += 2
-	a.rangePresent = binary.BigEndian.Uint16(data[n:])
+	a.RangePresent = binary.BigEndian.Uint16(data[n:])
 	n += 2
-	if a.rangePresent&NX_NAT_RANGE_IPV4_MIN != 0 {
-		a.rangeIPv4Min = net.IPv4(data[n], data[n+1], data[n+2], data[n+3])
+	if a.RangePresent&NX_NAT_RANGE_IPV4_MIN != 0 {
+		a.RangeIPv4Min = net.IPv4(data[n], data[n+1], data[n+2], data[n+3])
 		n += 4
 	}
-	if a.rangePresent&NX_NAT_RANGE_IPV4_MAX != 0 {
-		a.rangeIPv4Max = net.IPv4(data[n], data[n+1], data[n+2], data[n+3])
+	if a.RangePresent&NX_NAT_RANGE_IPV4_MAX != 0 {
+		a.RangeIPv4Max = net.IPv4(data[n], data[n+1], data[n+2], data[n+3])
 		n += 4
 	}
-	if a.rangePresent&NX_NAT_RANGE_IPV6_MIN != 0 {
-		a.rangeIPv6Min = make([]byte, 16)
-		copy(a.rangeIPv6Min, data[n:n+16])
+	if a.RangePresent&NX_NAT_RANGE_IPV6_MIN != 0 {
+		a.RangeIPv6Min = make([]byte, 16)
+		copy(a.RangeIPv6Min, data[n:n+16])
 		n += 16
 	}
-	if a.rangePresent&NX_NAT_RANGE_IPV6_MAX != 0 {
-		a.rangeIPv6Max = make([]byte, 16)
-		copy(a.rangeIPv6Max, data[n:n+16])
+	if a.RangePresent&NX_NAT_RANGE_IPV6_MAX != 0 {
+		a.RangeIPv6Max = make([]byte, 16)
+		copy(a.RangeIPv6Max, data[n:n+16])
 		n += 16
 	}
-	if a.rangePresent&NX_NAT_RANGE_PROTO_MIN != 0 {
+	if a.RangePresent&NX_NAT_RANGE_PROTO_MIN != 0 {
 		portMin := binary.BigEndian.Uint16(data[n:])
-		a.rangeProtoMin = &portMin
+		a.RangeProtoMin = &portMin
 		n += 2
 	}
-	if a.rangePresent&NX_NAT_RANGE_PROTO_MAX != 0 {
+	if a.RangePresent&NX_NAT_RANGE_PROTO_MAX != 0 {
 		portMax := binary.BigEndian.Uint16(data[n:])
-		a.rangeProtoMax = &portMax
+		a.RangeProtoMax = &portMax
 		n += 2
 	}
 
@@ -1041,27 +1041,27 @@ func NewNXActionDecTTLCntIDs(controllers uint16, ids ...uint16) *NXActionDecTTLC
 }
 
 type NXLearnSpecHeader struct {
-	src    bool
-	dst    bool
-	output bool
-	nBits  uint16
-	length uint16
+	Src    bool
+	Dst    bool
+	Output bool
+	NBits  uint16
+	Length uint16
 }
 
 func (h *NXLearnSpecHeader) MarshalBinary() (data []byte, err error) {
-	data = make([]byte, h.length)
-	value := h.nBits
-	if h.src {
+	data = make([]byte, h.Length)
+	value := h.NBits
+	if h.Src {
 		value |= 1 << LEARN_SPEC_HEADER_MATCH
 	} else {
 		value &^= 1 << LEARN_SPEC_HEADER_MATCH
 	}
-	if h.dst {
+	if h.Dst {
 		value |= 1 << LEARN_SPEC_HEADER_LOAD
 	} else {
 		value &^= 1 << LEARN_SPEC_HEADER_LOAD
 	}
-	if h.output {
+	if h.Output {
 		value &^= 1 << LEARN_SPEC_HEADER_MATCH
 		value |= 2 << LEARN_SPEC_HEADER_LOAD
 	}
@@ -1074,36 +1074,36 @@ func (h *NXLearnSpecHeader) UnmarshalBinary(data []byte) error {
 		return errors.New("the []byte is too short to unmarshal a full NXLearnSpecHeader message")
 	}
 	value := binary.BigEndian.Uint16(data)
-	h.length = 2
-	h.nBits = (0xffff >> 5) & value
-	h.src = ((1 << LEARN_SPEC_HEADER_MATCH) & value) != 0
-	h.dst = ((1 << LEARN_SPEC_HEADER_LOAD) & value) != 0
-	h.output = ((2 << LEARN_SPEC_HEADER_LOAD) & value) != 0
+	h.Length = 2
+	h.NBits = (0xffff >> 5) & value
+	h.Src = ((1 << LEARN_SPEC_HEADER_MATCH) & value) != 0
+	h.Dst = ((1 << LEARN_SPEC_HEADER_LOAD) & value) != 0
+	h.Output = ((2 << LEARN_SPEC_HEADER_LOAD) & value) != 0
 	return nil
 }
 
 func (h *NXLearnSpecHeader) Len() (n uint16) {
-	return h.length
+	return h.Length
 }
 
 func NewLearnHeaderMatchFromValue(nBits uint16) *NXLearnSpecHeader {
-	return &NXLearnSpecHeader{src: true, dst: false, nBits: nBits, length: 2}
+	return &NXLearnSpecHeader{Src: true, Dst: false, NBits: nBits, Length: 2}
 }
 
 func NewLearnHeaderMatchFromField(nBits uint16) *NXLearnSpecHeader {
-	return &NXLearnSpecHeader{src: false, dst: false, nBits: nBits, length: 2}
+	return &NXLearnSpecHeader{Src: false, Dst: false, NBits: nBits, Length: 2}
 }
 
 func NewLearnHeaderLoadFromValue(nBits uint16) *NXLearnSpecHeader {
-	return &NXLearnSpecHeader{src: true, dst: true, nBits: nBits, length: 2}
+	return &NXLearnSpecHeader{Src: true, Dst: true, NBits: nBits, Length: 2}
 }
 
 func NewLearnHeaderLoadFromField(nBits uint16) *NXLearnSpecHeader {
-	return &NXLearnSpecHeader{src: false, dst: true, nBits: nBits, length: 2}
+	return &NXLearnSpecHeader{Src: false, Dst: true, NBits: nBits, Length: 2}
 }
 
 func NewLearnHeaderOutputFromField(nBits uint16) *NXLearnSpecHeader {
-	return &NXLearnSpecHeader{src: false, dst: false, output: true, nBits: nBits, length: 2}
+	return &NXLearnSpecHeader{Src: false, Dst: false, Output: true, NBits: nBits, Length: 2}
 }
 
 type NXLearnSpecField struct {
@@ -1150,14 +1150,14 @@ type NXLearnSpec struct {
 
 func (s *NXLearnSpec) Len() uint16 {
 	length := s.Header.Len()
-	if s.Header.src {
-		length += 2 * ((s.Header.nBits + 15) / 16)
+	if s.Header.Src {
+		length += 2 * ((s.Header.NBits + 15) / 16)
 	} else {
 		length += 6
 	}
 
 	// Add the length of DstField if it is not to "output" to a port.
-	if !s.Header.output {
+	if !s.Header.Output {
 		length += 6
 	}
 	return length
@@ -1174,8 +1174,8 @@ func (s *NXLearnSpec) MarshalBinary() (data []byte, err error) {
 	n += len(b)
 	var srcData []byte
 	var srcDataLength int
-	if s.Header.src {
-		srcDataLength = int(2 * ((s.Header.nBits + 15) / 16))
+	if s.Header.Src {
+		srcDataLength = int(2 * ((s.Header.NBits + 15) / 16))
 		srcData = append(srcData, s.SrcValue[:srcDataLength]...)
 	} else {
 		srcData, err = s.SrcField.MarshalBinary()
@@ -1186,7 +1186,7 @@ func (s *NXLearnSpec) MarshalBinary() (data []byte, err error) {
 	}
 	copy(data[n:], srcData)
 	n += srcDataLength
-	if !s.Header.output {
+	if !s.Header.Output {
 		var dstData []byte
 		dstData, err = s.DstField.MarshalBinary()
 		if err != nil {
@@ -1205,8 +1205,8 @@ func (s *NXLearnSpec) UnmarshalBinary(data []byte) error {
 		return err
 	}
 	n := s.Header.Len()
-	if s.Header.src {
-		srcDataLength := 2 * ((s.Header.nBits + 15) / 16)
+	if s.Header.Src {
+		srcDataLength := 2 * ((s.Header.NBits + 15) / 16)
 		s.SrcValue = data[n : n+srcDataLength]
 		n += srcDataLength
 	} else {
@@ -1218,7 +1218,7 @@ func (s *NXLearnSpec) UnmarshalBinary(data []byte) error {
 		}
 		n += s.SrcField.Len()
 	}
-	if !s.Header.output {
+	if !s.Header.Output {
 		s.DstField = new(NXLearnSpecField)
 		err = s.DstField.UnmarshalBinary(data[n:])
 		if err != nil {

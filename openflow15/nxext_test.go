@@ -192,8 +192,8 @@ func TestCTLabel(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to UnmarshalBinary message: %v", err)
 	}
-	if field2.data != label {
-		t.Errorf("Unmarshalled CTLabel is incorrect, expect: %d, actual: %d", label, field2.data)
+	if field2.Data != label {
+		t.Errorf("Unmarshalled CTLabel is incorrect, expect: %d, actual: %d", label, field2.Data)
 	}
 
 	var mask = [16]byte{}
@@ -225,17 +225,17 @@ func TestNXActionCTNAT(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to Unmarshal NXActionCTNAT: %v", err)
 	}
-	if act2.rangeIPv4Min.String() != ipMin.String() {
-		t.Errorf("Failed to set RangeIPv4Min, expect: %s, actual: %s", ipMin.String(), act2.rangeIPv4Min.String())
+	if act2.RangeIPv4Min.String() != ipMin.String() {
+		t.Errorf("Failed to set RangeIPv4Min, expect: %s, actual: %s", ipMin.String(), act2.RangeIPv4Min.String())
 	}
-	if act2.rangeIPv4Max.String() != ipMax.String() {
-		t.Errorf("Failed to set rangeIPv4Max, expect: %s, actual: %s", ipMax.String(), act2.rangeIPv4Max.String())
+	if act2.RangeIPv4Max.String() != ipMax.String() {
+		t.Errorf("Failed to set RangeIPv4Max, expect: %s, actual: %s", ipMax.String(), act2.RangeIPv4Max.String())
 	}
-	if *act2.rangeProtoMin != minPort {
-		t.Errorf("Failed to set SetRangeProtoMin, expect: %d, actual: %d", minPort, *act2.rangeProtoMin)
+	if *act2.RangeProtoMin != minPort {
+		t.Errorf("Failed to set SetRangeProtoMin, expect: %d, actual: %d", minPort, *act2.RangeProtoMin)
 	}
-	if *act2.rangeProtoMax != maxPort {
-		t.Errorf("Failed to set SetRangeProtoMax, expect: %d, actual: %d", maxPort, *act2.rangeProtoMax)
+	if *act2.RangeProtoMax != maxPort {
+		t.Errorf("Failed to set SetRangeProtoMax, expect: %d, actual: %d", maxPort, *act2.RangeProtoMax)
 	}
 }
 
@@ -749,20 +749,20 @@ func nxLearnSpecFieldEquals(oriField, newField *NXLearnSpecField) error {
 }
 
 func nxLearnSpecHeaderEquals(oriHeader, newHeader *NXLearnSpecHeader) error {
-	if oriHeader.length != newHeader.length {
-		return errors.New("header length not equal")
+	if oriHeader.Length != newHeader.Length {
+		return errors.New("header Length not equal")
 	}
-	if oriHeader.src != newHeader.src {
-		return errors.New("header src not equal")
+	if oriHeader.Src != newHeader.Src {
+		return errors.New("header Src not equal")
 	}
-	if oriHeader.dst != newHeader.dst {
-		return errors.New("header dst not equal")
+	if oriHeader.Dst != newHeader.Dst {
+		return errors.New("header Dst not equal")
 	}
-	if oriHeader.nBits != newHeader.nBits {
-		return errors.New("header nBits not equal")
+	if oriHeader.NBits != newHeader.NBits {
+		return errors.New("header NBits not equal")
 	}
-	if oriHeader.output != newHeader.output {
-		return errors.New("header output not equal")
+	if oriHeader.Output != newHeader.Output {
+		return errors.New("header Output not equal")
 	}
 	return nil
 }

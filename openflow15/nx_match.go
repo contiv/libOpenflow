@@ -85,8 +85,8 @@ func (m *ByteArrayField) UnmarshalBinary(data []byte) error {
 }
 
 type CTStates struct {
-	data uint32
-	mask uint32
+	Data uint32
+	Mask uint32
 }
 
 func NewCTStates() *CTStates {
@@ -95,98 +95,98 @@ func NewCTStates() *CTStates {
 
 // SetNew sets ct_state as "+new".
 func (s *CTStates) SetNew() {
-	s.data |= 1 << 0
-	s.mask |= 1 << 0
+	s.Data |= 1 << 0
+	s.Mask |= 1 << 0
 }
 
 // UnsetNew sets ct_state as "-new".
 func (s *CTStates) UnsetNew() {
-	s.data &^= 1 << NX_CT_STATE_NEW_OFS
-	s.mask |= 1 << NX_CT_STATE_NEW_OFS
+	s.Data &^= 1 << NX_CT_STATE_NEW_OFS
+	s.Mask |= 1 << NX_CT_STATE_NEW_OFS
 }
 
 // SetEst sets ct_state as "+est".
 func (s *CTStates) SetEst() {
-	s.data |= 1 << NX_CT_STATE_EST_OFS
-	s.mask |= 1 << NX_CT_STATE_EST_OFS
+	s.Data |= 1 << NX_CT_STATE_EST_OFS
+	s.Mask |= 1 << NX_CT_STATE_EST_OFS
 }
 
 // UnsetEst sets ct_state as "-est".
 func (s *CTStates) UnsetEst() {
-	s.data &^= 1 << NX_CT_STATE_EST_OFS
-	s.mask |= 1 << NX_CT_STATE_EST_OFS
+	s.Data &^= 1 << NX_CT_STATE_EST_OFS
+	s.Mask |= 1 << NX_CT_STATE_EST_OFS
 }
 
 // SetRel sets ct_state as "+rel".
 func (s *CTStates) SetRel() {
-	s.data |= 1 << NX_CT_STATE_REL_OFS
-	s.mask |= 1 << NX_CT_STATE_REL_OFS
+	s.Data |= 1 << NX_CT_STATE_REL_OFS
+	s.Mask |= 1 << NX_CT_STATE_REL_OFS
 }
 
 // UnsetRel sets ct_state as "-rel".
 func (s *CTStates) UnsetRel() {
-	s.data &^= 1 << NX_CT_STATE_REL_OFS
-	s.mask |= 1 << NX_CT_STATE_REL_OFS
+	s.Data &^= 1 << NX_CT_STATE_REL_OFS
+	s.Mask |= 1 << NX_CT_STATE_REL_OFS
 }
 
 // SetRpl sets ct_state as "+rpl".
 func (s *CTStates) SetRpl() {
-	s.data |= 1 << NX_CT_STATE_RPL_OFS
-	s.mask |= 1 << NX_CT_STATE_RPL_OFS
+	s.Data |= 1 << NX_CT_STATE_RPL_OFS
+	s.Mask |= 1 << NX_CT_STATE_RPL_OFS
 }
 
 // UnsetRpl sets ct_state as "-rpl".
 func (s *CTStates) UnsetRpl() {
-	s.data &^= 1 << NX_CT_STATE_RPL_OFS
-	s.mask |= 1 << NX_CT_STATE_RPL_OFS
+	s.Data &^= 1 << NX_CT_STATE_RPL_OFS
+	s.Mask |= 1 << NX_CT_STATE_RPL_OFS
 }
 
 // SetInv sets ct_state as "+inv".
 func (s *CTStates) SetInv() {
-	s.data |= 1 << NX_CT_STATE_INV_OFS
-	s.mask |= 1 << NX_CT_STATE_INV_OFS
+	s.Data |= 1 << NX_CT_STATE_INV_OFS
+	s.Mask |= 1 << NX_CT_STATE_INV_OFS
 }
 
 // UnsetInv sets ct_state as "-inv".
 func (s *CTStates) UnsetInv() {
-	s.data &^= 1 << NX_CT_STATE_INV_OFS
-	s.mask |= 1 << NX_CT_STATE_INV_OFS
+	s.Data &^= 1 << NX_CT_STATE_INV_OFS
+	s.Mask |= 1 << NX_CT_STATE_INV_OFS
 }
 
 // SetTrk sets ct_state as "+trk".
 func (s *CTStates) SetTrk() {
-	s.data |= 1 << NX_CT_STATE_TRK_OFS
-	s.mask |= 1 << NX_CT_STATE_TRK_OFS
+	s.Data |= 1 << NX_CT_STATE_TRK_OFS
+	s.Mask |= 1 << NX_CT_STATE_TRK_OFS
 }
 
 // UnsetTrk sets ct_state as "-trk".
 func (s *CTStates) UnsetTrk() {
-	s.data &^= 1 << NX_CT_STATE_TRK_OFS
-	s.mask |= 1 << NX_CT_STATE_TRK_OFS
+	s.Data &^= 1 << NX_CT_STATE_TRK_OFS
+	s.Mask |= 1 << NX_CT_STATE_TRK_OFS
 }
 
 // SetSNAT sets ct_state as "+snat".
 func (s *CTStates) SetSNAT() {
-	s.data |= 1 << NX_CT_STATE_SNAT_OFS
-	s.mask |= 1 << NX_CT_STATE_SNAT_OFS
+	s.Data |= 1 << NX_CT_STATE_SNAT_OFS
+	s.Mask |= 1 << NX_CT_STATE_SNAT_OFS
 }
 
 // UnsetSNAT sets ct_state as "-snat".
 func (s *CTStates) UnsetSNAT() {
-	s.data &^= 1 << NX_CT_STATE_SNAT_OFS
-	s.mask |= 1 << NX_CT_STATE_SNAT_OFS
+	s.Data &^= 1 << NX_CT_STATE_SNAT_OFS
+	s.Mask |= 1 << NX_CT_STATE_SNAT_OFS
 }
 
 // SetDNAT sets ct_state as "+dnat".
 func (s *CTStates) SetDNAT() {
-	s.data |= 1 << NX_CT_STATE_DNAT_OFS
-	s.mask |= 1 << NX_CT_STATE_DNAT_OFS
+	s.Data |= 1 << NX_CT_STATE_DNAT_OFS
+	s.Mask |= 1 << NX_CT_STATE_DNAT_OFS
 }
 
 // UnsetDNAT sets ct_state as "-dnat".
 func (s *CTStates) UnsetDNAT() {
-	s.data &^= 1 << NX_CT_STATE_DNAT_OFS
-	s.mask |= 1 << NX_CT_STATE_DNAT_OFS
+	s.Data &^= 1 << NX_CT_STATE_DNAT_OFS
+	s.Mask |= 1 << NX_CT_STATE_DNAT_OFS
 }
 
 type NXRange struct {
@@ -255,8 +255,8 @@ func NewTunMetadataField(idx int, data []byte, mask []byte) *MatchField {
 
 func NewCTStateMatchField(states *CTStates) *MatchField {
 	field, _ := FindFieldHeaderByName("NXM_NX_CT_STATE", true)
-	field.Value = newUint32Message(states.data)
-	field.Mask = newUint32Message(states.mask)
+	field.Value = newUint32Message(states.Data)
+	field.Mask = newUint32Message(states.Mask)
 	return field
 }
 
@@ -279,26 +279,26 @@ func NewCTMarkMatchField(mark uint32, mask *uint32) *MatchField {
 }
 
 type CTLabel struct {
-	data [16]byte
+	Data [16]byte
 }
 
 func (m *CTLabel) Len() uint16 {
-	return uint16(len(m.data))
+	return uint16(len(m.Data))
 }
 
 func (m *CTLabel) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, m.Len())
-	copy(data, m.data[:])
+	copy(data, m.Data[:])
 	err = nil
 	return
 }
 
 func (m *CTLabel) UnmarshalBinary(data []byte) error {
-	m.data = [16]byte{}
-	if len(data) < len(m.data) {
-		copy(m.data[:], data)
+	m.Data = [16]byte{}
+	if len(data) < len(m.Data) {
+		copy(m.Data[:], data)
 	} else {
-		copy(m.data[:], data[:16])
+		copy(m.Data[:], data[:16])
 	}
 	return nil
 }
