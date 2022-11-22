@@ -410,6 +410,8 @@ func DecodeMatchField(class uint16, field uint8, length uint8, hasMask bool, dat
 			val = new(Ipv6ExtHdrField)
 		case OXM_FIELD_TCP_FLAGS:
 			val = new(TcpFlagsField)
+		case OXM_FIELD_ACTSET_OUTPUT:
+			val = new(ActsetOutputField)
 		default:
 			err := fmt.Errorf("unhandled Field: %d in Class: %d", field, class)
 			klog.ErrorS(err, "Received bad pkt class", "data", data)
@@ -611,8 +613,6 @@ func DecodeMatchField(class uint16, field uint8, length uint8, hasMask bool, dat
 		switch field {
 		case OXM_FIELD_TCP_FLAGS:
 			val = new(TcpFlagsField)
-		case OXM_FIELD_ACTSET_OUTPUT:
-			val = new(ActsetOutputField)
 		default:
 			err := fmt.Errorf("unknown field for experimenter: %v", field)
 			klog.ErrorS(err, "Received invalid field", "data", data)
@@ -629,7 +629,7 @@ func DecodeMatchField(class uint16, field uint8, length uint8, hasMask bool, dat
 	}
 }
 
-//  ofp_match_type 1.5
+// ofp_match_type 1.5
 const (
 	MatchType_Standard = iota /* Deprecated. */
 	MatchType_OXM
