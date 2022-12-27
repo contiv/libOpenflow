@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"net"
 	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -89,7 +90,15 @@ func (m *MessageStream) outbound() {
 			for i := 0; i < numParserGoroutines; i++ {
 				m.parserShutdown <- true
 			}
-			return
+
+			// clear Outbound chan
+			for {
+				select {
+				case <-m.Outbound:
+				case <-time.After(time.Minute * 2):
+					return
+				}
+			}
 		case msg := <-m.Outbound:
 			// Forward outbound messages to conn
 			data, _ := msg.MarshalBinary()
