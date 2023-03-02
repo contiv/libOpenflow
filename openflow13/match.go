@@ -475,7 +475,7 @@ func DecodeMatchField(class uint16, field uint8, length uint8, hasMask bool, dat
 	return nil, nil
 }
 
-//  ofp_match_type 1.3
+// ofp_match_type 1.3
 const (
 	MatchType_Standard = iota /* Deprecated. */
 	MatchType_OXM

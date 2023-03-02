@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 
 	"github.com/contiv/libOpenflow/common"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // ofp_flow_mod     1.3

@@ -81,20 +81,20 @@ func (a *ARP) UnmarshalBinary(data []byte) error {
 		return errors.New("The []byte is too short to unmarshal a full ARP message.")
 	}
 
-    a.HWSrc = net.HardwareAddr(make([]byte, 6))
-    copy(a.HWSrc, data[n : n+int(a.HWLength)])
-    n += int(a.HWLength)
+	a.HWSrc = net.HardwareAddr(make([]byte, 6))
+	copy(a.HWSrc, data[n:n+int(a.HWLength)])
+	n += int(a.HWLength)
 
-    a.IPSrc = net.IP(make([]byte, 4))
-    copy(a.IPSrc, data[n : n+int(a.ProtoLength)])
-    n += int(a.ProtoLength)
+	a.IPSrc = net.IP(make([]byte, 4))
+	copy(a.IPSrc, data[n:n+int(a.ProtoLength)])
+	n += int(a.ProtoLength)
 
-    a.HWDst = net.HardwareAddr(make([]byte, 6))
-    copy(a.HWDst, data[n : n+int(a.HWLength)])
-    n += int(a.HWLength)
+	a.HWDst = net.HardwareAddr(make([]byte, 6))
+	copy(a.HWDst, data[n:n+int(a.HWLength)])
+	n += int(a.HWLength)
 
-    a.IPDst = net.IP(make([]byte, 4))
-    copy(a.IPDst, data[n : n+int(a.ProtoLength)])
+	a.IPDst = net.IP(make([]byte, 4))
+	copy(a.IPDst, data[n:n+int(a.ProtoLength)])
 
 	return nil
 }
