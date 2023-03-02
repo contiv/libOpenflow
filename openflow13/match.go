@@ -1638,3 +1638,31 @@ func (f *IcmpCodeField) UnmarshalBinary(data []byte) error {
 	f.Code = data[0]
 	return nil
 }
+
+func NewIcmpCodeField(code uint8) *MatchField {
+	f := new(MatchField)
+	f.Class = OXM_CLASS_OPENFLOW_BASIC
+	f.Field = OXM_FIELD_ICMPV4_CODE
+	f.HasMask = false
+
+	icmpCodeField := new(IcmpCodeField)
+	icmpCodeField.Code = code
+	f.Value = icmpCodeField
+	f.Length = uint8(icmpCodeField.Len())
+
+	return f
+}
+
+func NewIcmpTypeField(icmpType uint8) *MatchField {
+	f := new(MatchField)
+	f.Class = OXM_CLASS_OPENFLOW_BASIC
+	f.Field = OXM_FIELD_ICMPV4_TYPE
+	f.HasMask = false
+
+	icmpTypeField := new(IcmpTypeField)
+	icmpTypeField.Type = icmpType
+	f.Value = icmpTypeField
+	f.Length = uint8(icmpTypeField.Len())
+
+	return f
+}
