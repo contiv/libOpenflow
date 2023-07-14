@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net"
+
+	"golang.org/x/exp/maps"
 )
 
 type Uint16Message struct {
@@ -209,6 +211,26 @@ func NewRegMatchField(idx int, data uint32, dataRng *NXRange) *MatchField {
 		field.Mask = newUint32Message(dataRng.ToUint32Mask())
 	}
 	return field
+}
+
+// NewMulitiNXRegMatch merge registers with same id
+func NewMulitiRegMatch(fields ...*MatchField) []*MatchField {
+	regMap := make(map[uint8]*MatchField)
+
+	for _, reg := range fields {
+		if v, ok := regMap[reg.Field]; ok {
+			v.HasMask = v.HasMask || reg.HasMask
+			v.Mask = &Uint32Message{
+				Data: v.Mask.(*Uint32Message).Data | reg.Mask.(*Uint32Message).Data,
+			}
+			v.Value = &Uint32Message{
+				Data: v.Value.(*Uint32Message).Data | reg.Value.(*Uint32Message).Data,
+			}
+		} else {
+			regMap[reg.Field] = reg
+		}
+	}
+	return maps.Values(regMap)
 }
 
 func newNXTunMetadataHeader(idx int, hasMask bool) *MatchField {
