@@ -283,6 +283,15 @@ func (p *PacketOut) UnmarshalBinary(data []byte) error {
 	return err
 }
 
+func (p *PacketOut) SetData(data []byte) {
+	p.Data = util.NewBuffer(data)
+}
+
+func (p *PacketOut) GetData() []byte {
+	d, _ := p.Data.MarshalBinary()
+	return d
+}
+
 // ofp_packet_in 1.3
 type PacketIn struct {
 	common.Header
@@ -371,6 +380,11 @@ func (p *PacketIn) UnmarshalBinary(data []byte) error {
 
 	err = p.Data.UnmarshalBinary(data[n:])
 	return err
+}
+
+func (p *PacketIn) GetData() []byte {
+	b, _ := p.Data.MarshalBinary()
+	return b
 }
 
 // ofp_packet_in_reason 1.3

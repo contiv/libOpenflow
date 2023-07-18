@@ -80,7 +80,6 @@ func (m *Match) MarshalBinary() (data []byte, err error) {
 }
 
 func (m *Match) UnmarshalBinary(data []byte) error {
-
 	n := 0
 	m.Type = binary.BigEndian.Uint16(data[n:])
 	n += 2
@@ -214,6 +213,17 @@ func (m *MatchField) UnmarshalHeader(data []byte) error {
 	n += 1
 	m.Length = data[n] & 0xff
 	return err
+}
+
+func (m *MatchField) GetOXMName() string {
+	switch m.Class {
+	case OXM_CLASS_OPENFLOW_BASIC:
+		switch m.Field {
+		case OXM_FIELD_IN_PORT:
+			return "in_port"
+		}
+	}
+	return ""
 }
 
 func DecodeMatchField(class uint16, field uint8, length uint8, hasMask bool, data []byte) (util.Message, error) {
